@@ -21,7 +21,6 @@
 🛡️ GNU GPLv3 License: https://github.com/Agzes/FluAutoClicker/blob/main/LICENSE 
 </h4><h3></h3>
 /𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘/</kbd>
-
 <br><br>
 
 <kbd align="Center">
