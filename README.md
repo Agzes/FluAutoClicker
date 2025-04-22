@@ -8,7 +8,7 @@
 <a href="" target="_blank" width="1000">
    <img src="ReadMe/ShowCase.png" width="1000" alt="👁️ Showcase"/>
 </a>
-<a href="" target="_blank" width="1000">
+<a href="Wiki/README.md" target="_blank" width="1000">
    <img src="ReadMe/Wiki.png" width="1000" alt="📚 Wiki"/>
 </a>
 
