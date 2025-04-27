@@ -174,7 +174,7 @@
                 <StackPanel Orientation="Horizontal" Spacing="10"  Margin="0,10,0,-4">
                     <StackPanel Orientation="Vertical" Spacing="10"  Margin="0,0,0,0">
                         <RadioButton x:Name="CurrentLocationRadio" GroupName="CursorPos" Content="Current location" IsChecked="True" Margin="0,0,0,-15"/>
-                        <RadioButton x:Name="FixedLocationRadio" GroupName="CursorPos" Content="On Location (w/o Jiggler)" Margin="0,0,0,0"/>
+                        <RadioButton x:Name="FixedLocationRadio" GroupName="CursorPos" Content="On Location" ToolTipService.ToolTip="Note: Jiggler not work when enabled" Margin="0,0,0,0"/>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Spacing="10"  Margin="95,-7,0,0">
