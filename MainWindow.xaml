@@ -1,0 +1,211 @@
+<Window
+    x:Class="FluAutoClicker.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:Microsoft.UI.Xaml.Controls"
+    mc:Ignorable="d"
+    Title="FluAutoClicker">
+
+    <Window.SystemBackdrop>
+        <DesktopAcrylicBackdrop/>
+    </Window.SystemBackdrop>
+
+    <Grid Background="Transparent"
+          Padding="10">
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Spacing="0" Margin="-2,-5,0,0">
+            <TextBlock Text="Flu"  Margin="0,1,0,0" Foreground="LightSkyBlue" FontWeight="Bold"/>
+            <TextBlock Text="AutoClicker "  Margin="0,1,0,0" Foreground="LightGray"/>
+            <TextBlock Text=" 1.0" ToolTipService.ToolTip="stable v.1.0 [1]" VerticalAlignment="Top" FontSize="10"  Margin="0,0,0,0" Foreground="Gray"/>
+        </StackPanel>
+
+        <InfoBar x:Name="StatusInfoBar" 
+                 Grid.Row="0"
+                 IsOpen="False"
+                 IsClosable="True"
+                 VerticalAlignment="Top"
+                 HorizontalAlignment="Center"
+                 Margin="0,20,0,0"/>
+
+        <Border Grid.Row="0" Background="#2c121212"
+                BorderBrush="#2c2c2c" BorderThickness="2"
+                CornerRadius="5" Padding="10" Margin="0,25,0,10">
+
+            <StackPanel>
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="2" Margin="0,0,0,0">
+                        <TextBlock Text="Click interval"  Margin="0,-3,0,8"/>
+                        <TextBlock Text=" • "  Margin="0,-3,0,8"/>
+                        <TextBlock x:Name="CPSTextBlock" Text=" 0 CPS" ToolTipService.ToolTip="CPS - Click Per Second" Margin="0,-3,0,8" Foreground="Coral" FontSize="12.5" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <Canvas>
+                        <Line X1="-100" Y1="0" X2="500" Y2="0" Stroke="#2c2c2c" StrokeThickness="2" />
+                    </Canvas>
+
+                    <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,10,0,-4">
+                        <StackPanel Orientation="Vertical" Spacing="2">
+                            <NumberBox x:Name="HoursBox" Loaded="NumberBox_Loaded" ToolTipService.ToolTip="Hours" Width="70" Value="0" SpinButtonPlacementMode="Compact" SmallChange="1" LargeChange="5"/>
+                            <TextBlock Text="H" ToolTipService.ToolTip="Hours" HorizontalAlignment="Center" Foreground="#777777"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Vertical" Spacing="2">
+                            <NumberBox x:Name="MinutesBox" Loaded="NumberBox_Loaded" ToolTipService.ToolTip="Minutes" Width="70" Value="0" SpinButtonPlacementMode="Compact" SmallChange="1" LargeChange="5" />
+                            <TextBlock Text="M" ToolTipService.ToolTip="Minutes" HorizontalAlignment="Center" Foreground="#777777"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Vertical" Spacing="2">
+                            <NumberBox x:Name="SecondsBox" Loaded="NumberBox_Loaded" ToolTipService.ToolTip="Seconds" Width="70" Value="0" SpinButtonPlacementMode="Compact" SmallChange="1" LargeChange="5" />
+                            <TextBlock Text="S" ToolTipService.ToolTip="Seconds" HorizontalAlignment="Center" Foreground="#777777"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Vertical" Spacing="2">
+                            <NumberBox x:Name="MillisecondsBox" Loaded="NumberBox_Loaded" ToolTipService.ToolTip="Milliseconds" Width="70" Value="100" SpinButtonPlacementMode="Compact" SmallChange="1" LargeChange="100" Maximum="999"/>
+                            <TextBlock Text="Ms" ToolTipService.ToolTip="Milliseconds" HorizontalAlignment="Center" Foreground="#777777"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Vertical" Spacing="2">
+                            <StackPanel Orientation="Horizontal" Spacing="0">
+                                <TextBlock VerticalAlignment="Center" Text="±" ToolTipService.ToolTip="Random offset"  Foreground="#777777" Margin="34,0,4,0"/>
+                                <NumberBox x:Name="RandomOffsetBox" ToolTipService.ToolTip="Random offset - Milliseconds" VerticalAlignment="Top" Loaded="NumberBox_Loaded" Width="70" Height="32" Value="0" SpinButtonPlacementMode="Compact" SmallChange="10" LargeChange="50"/>
+                            </StackPanel>
+                            <TextBlock Text="Ms" ToolTipService.ToolTip="Milliseconds" HorizontalAlignment="Center" Foreground="#777777" Margin="57,0,4,0"/>
+                        </StackPanel>
+
+                    </StackPanel>
+
+                    <Slider
+                    x:Name="CPS_Slider" 
+                    ValueChanged="CPS_Slider_ValueChanged"
+                    Margin="0,6,0,0"
+                    TickFrequency="10"
+                    TickPlacement="Outside"
+                    SnapsTo="StepValues" 
+                    Maximum="101"
+                    ToolTipService.ToolTip="CPS Slider"
+                    IsThumbToolTipEnabled="False"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="1" Background="#2c121212"
+                BorderBrush="#2c2c2c" BorderThickness="2"
+                CornerRadius="5" Padding="10" Margin="0,0,0,10">
+
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="2" Margin="0,0,0,0">
+                    <TextBlock Text="Click Options"  Margin="0,-3,0,8"/>
+                </StackPanel>
+
+                <Canvas>
+                    <Line X1="-100" Y1="0" X2="500" Y2="0" Stroke="#2c2c2c" StrokeThickness="2" />
+                </Canvas>
+
+                <StackPanel Orientation="Horizontal" Spacing="20"  Margin="0,10,0,-4">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="9">
+                        <Button x:Name="jigglerMenuButton" ToolTipService.ToolTip="Jiggler Mode" FontFamily="Segoe Fluent Icons" Content="&#xE7C9;" Width="38" Height="32" Margin="0,-5,0,0"/>
+                        <ComboBox x:Name="MouseButtonComboBox" ToolTipService.ToolTip="Mouse Button" Width="170" SelectedIndex="0" Margin="0,0,0,5">
+                            <ComboBoxItem Content="Left Button ->"/>
+                            <ComboBoxItem Content="Middle Button ->"/>
+                            <ComboBoxItem Content="Right Button ->"/>
+                        </ComboBox>
+                        <ComboBox x:Name="MouseButtonHoldClickComboBox" ToolTipService.ToolTip="Click Type" Width="167" SelectedIndex="0" Margin="0,0,0,5">
+                            <ComboBoxItem Content="Click"/>
+                            <ComboBoxItem Content="Hold for:"/>
+                        </ComboBox>
+                        <NumberBox Visibility="Collapsed" x:Name="MouseButtonHoldBox" ToolTipService.ToolTip="Milliseconds to Hold" VerticalAlignment="Top" Loaded="NumberBox_Loaded" Width="70" Height="32" Value="0" SpinButtonPlacementMode="Compact" SmallChange="10" LargeChange="50"/>
+                        <TextBlock Visibility="Collapsed" x:Name="MouseButtonHoldMsText" Text="Ms" ToolTipService.ToolTip="Milliseconds" Foreground="#777777" Margin="-3,7,0,0"/>
+                        <Button x:Name="MultiThreadMenuButton" FontFamily="Segoe Fluent Icons" ToolTipService.ToolTip="[beta] Multi-Thread Mode" Content="&#xE81E;" Width="38" Height="32" Margin="0,-5,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="2" Background="#2c121212"
+        BorderBrush="#2c2c2c" BorderThickness="2"
+        CornerRadius="5" Padding="10" Margin="0,0,0,10">
+
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="0" Margin="0,0,0,0">
+                    <TextBlock Text="Click Repeat"  Margin="0,-3,0,8"/>
+                </StackPanel>
+
+                <Canvas>
+                    <Line X1="-100" Y1="0" X2="500" Y2="0" Stroke="#2c2c2c" StrokeThickness="2" />
+                </Canvas>
+
+                <StackPanel Orientation="Horizontal" Spacing="20"  Margin="0,10,0,-4">
+                    <StackPanel Orientation="Horizontal">
+                        <ComboBox x:Name="RepeatModeComboBox" Width="439" SelectedIndex="0" Margin="0,0,0,5">
+                            <ComboBoxItem Content="Repeat ∞ times (until stop)"/>
+                            <ComboBoxItem Content="Repeat {x} times"/>
+                            <ComboBoxItem Content="Repeat {x} seconds"/>
+                        </ComboBox>
+
+                        <TextBlock x:Name="RepeatValueLabel" VerticalAlignment="Center" Text="x:"  Foreground="#777777" Margin="5,0,4,6" Visibility="Collapsed"/>
+                        <NumberBox x:Name="RepeatValueBox" VerticalAlignment="Top" Visibility="Visible" Loaded="NumberBox_Loaded" Width="70" Value="10" SpinButtonPlacementMode="Compact" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="3" Background="#2c121212"
+                BorderBrush="#2c2c2c" BorderThickness="2"
+                CornerRadius="5" Padding="10" Margin="0,0,0,10">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="0" Margin="0,0,0,0">
+                    <TextBlock Text="Cursor position" Margin="0,-3,0,8"/>
+                </StackPanel>
+
+                <Canvas>
+                    <Line X1="-100" Y1="0" X2="500" Y2="0" Stroke="#2c2c2c" StrokeThickness="2" />
+                </Canvas>
+
+                <StackPanel Orientation="Horizontal" Spacing="10"  Margin="0,10,0,-4">
+                    <StackPanel Orientation="Vertical" Spacing="10"  Margin="0,0,0,0">
+                        <RadioButton x:Name="CurrentLocationRadio" GroupName="CursorPos" Content="Current location" IsChecked="True" Margin="0,0,0,-15"/>
+                        <RadioButton x:Name="FixedLocationRadio" GroupName="CursorPos" Content="On Location (w/o Jiggler)" Margin="0,0,0,0"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Spacing="10"  Margin="95,-7,0,0">
+                        <NumberBox x:Name="XPositionBox" PlaceholderText="X" Visibility="Visible" Loaded="NumberBox_Loaded" Width="70" Height="32" Value="0" />
+                        <NumberBox x:Name="YPositionBox" PlaceholderText="Y" Visibility="Visible" Loaded="NumberBox_Loaded" Width="70" Height="32" Value="0" />
+                    </StackPanel>
+                    <Button x:Name="GetPositionButton" Width="40" Height="40" Margin="0,-6,0,0" Content="&#xE8B0;" FontFamily="Segoe Fluent Icons"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <StackPanel Grid.Row="5" Orientation="Horizontal" Spacing="10" 
+            HorizontalAlignment="Center" Margin="0,-6,0,10">
+            <TextBlock Text=""  Foreground="#adadad" Opacity="0.7" x:Name="StatusBarText"/>
+        </StackPanel>
+
+
+        <StackPanel Grid.Row="6" Orientation="Horizontal" Spacing="10" 
+                    HorizontalAlignment="Center" Margin="0,1,0,10">
+            <Button x:Name="StartButton" Height="50" Margin="0,0,0,0" Width="464" Style="{StaticResource AccentButtonStyle}" >
+                <StackPanel Orientation="Horizontal">
+                    <FontIcon x:Name="PlayIcon" FontFamily="Segoe Fluent Icons" Glyph="" FontSize="12"  Margin="0,0,5,0" />
+                    <TextBlock Text="Start • F7" VerticalAlignment="Center"  FontWeight="SemiBold"/>
+                </StackPanel>
+            </Button>
+        </StackPanel>
+
+        <StackPanel Grid.Row="7" Orientation="Horizontal" Spacing="10" 
+            HorizontalAlignment="Center" Margin="0,0,0,10">
+            <Button x:Name="HotkeyButton" Content="Hotkey Settings" Width="227" Click="HotkeyButton_Click"/>
+            <Button x:Name="SettingsButton" Content="Settings" Width="227" Click="SettingsButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>
