@@ -1,3 +1,5 @@
+`last update: 01.05`
+
 
 # FluAutoClicker – Build Instructions
 
