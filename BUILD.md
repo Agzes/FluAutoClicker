@@ -1,4 +1,4 @@
-`last update: 01.05`
+`last update: 01.05 | ...`
 
 
 # FluAutoClicker – Build Instructions
