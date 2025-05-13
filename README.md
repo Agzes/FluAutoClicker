@@ -18,7 +18,7 @@
 /𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘/<h4> </h4>
 <h4>
 
-🛡️ GNU GPLv3 License: https://github.com/Agzes/FluAutoClicker/blob/main/LICENSE 
+🛡️ GNU GPLv3: https://github.com/Agzes/FluAutoClicker/blob/main/LICENSE 
 </h4><h3></h3>
 /𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘//𝗟𝗜𝗖𝗘𝗡𝗦𝗘/</kbd>
 <br><br>
