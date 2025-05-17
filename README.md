@@ -35,8 +35,8 @@
 
 <h2 align="center">  </h2>
 
-<h5 align="center"> <img width="auto" height="auto" src="https://visit-counter.vercel.app/counter.png?page=github.com%2FAgzes-FluAutoClicker-since15052025e&s=40&c=87cefa&bg=00000000&no=2&ff=digi&tb=&ta="> <br>
-<kbd>visit counter since 15.05.2025 </kbd> </h5>
+<!-- <h5 align="center"> <img width="auto" height="auto" src="https://visit-counter.vercel.app/counter.png?page=github.com%2FAgzes-FluAutoClicker-since15052025e&s=40&c=87cefa&bg=00000000&no=2&ff=digi&tb=&ta="> <br> 
+<kbd>visit counter since 15.05.2025 </kbd> </h5> -->
 
 
 <div align="center"> <kbd>With</kbd> <kbd>❤️</kbd> <kbd>by</kbd> <kbd>Agzes</kbd> </div>
