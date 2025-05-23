@@ -39,6 +39,7 @@
 <kbd>visit counter since 15.05.2025 </kbd> </h5> -->
 
 
+<div align="center"> <kbd>pls ⭐ project!</kbd> </div>
 <div align="center"> <kbd>With</kbd> <kbd>❤️</kbd> <kbd>by</kbd> <kbd>Agzes</kbd> </div>
 
 
