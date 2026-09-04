@@ -177,7 +177,7 @@ async function saveProfileAs(mode: "blank" | "copy" | "ui") {
         const current = await persistCurrentSettings();
         config = {
             ...current,
-            mouse: { cps: 1, variation_ms: 0, button: "left", click_mode: "normal", hold_duration: 0, hold_unit: "ms", repeat_mode: "off", repeat_count: 1, repeat_unit: "times", position_mode: "current", coord_x: 0, coord_y: 0 },
+            mouse: { cps: 1, variation_ms: 0, button: "left", click_mode: "normal", click_type: "single", hold_duration: 0, hold_unit: "ms", repeat_mode: "off", repeat_count: 1, repeat_unit: "times", position_mode: "current", coord_x: 0, coord_y: 0 },
             keyboard: { cps: 1, variation_ms: 0, key: "", modifiers: "", click_mode: "normal", hold_duration: 0, hold_unit: "ms", repeat_mode: "off", repeat_count: 1, repeat_unit: "times" },
             jiggler: { active: false, distance: 0, interval_ms: 0, pattern: "linear" },
             macro_settings: { repeat_mode: "off", repeat_count: 1, repeat_duration_ms: 0, recording_options: { record_mouse_clicks: true, record_mouse_moves: false, record_keyboard: true, record_delays: true, record_click_position: false, record_live_preview: false }, actions: [] },

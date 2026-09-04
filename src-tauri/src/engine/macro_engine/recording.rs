@@ -453,6 +453,7 @@ fn handle_recording_event(
                         } else {
                             None
                         },
+                        clicks: 1,
                     },
                     Some(&mut context),
                     event_time,
@@ -478,6 +479,7 @@ fn handle_recording_event(
                             } else {
                                 None
                             },
+                            clicks: 1,
                         },
                         Some(&mut context),
                         event_time,
@@ -972,6 +974,7 @@ pub async fn record_local_macro_event(
                                     } else {
                                         None
                                     },
+                                    clicks: 1,
                                 });
                             }
                         }
@@ -991,6 +994,7 @@ pub async fn record_local_macro_event(
                                     } else {
                                         None
                                     },
+                                    clicks: 1,
                                 });
                             }
                         }

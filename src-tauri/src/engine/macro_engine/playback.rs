@@ -14,6 +14,12 @@ use super::types::{
     MacroPlayerState,
 };
 
+const INTRA_CLICK_GAP_MS: f64 = 25.0;
+
+fn intra_click_gap_ms(multiplier: f64) -> u64 {
+    (INTRA_CLICK_GAP_MS / multiplier).round().max(1.0) as u64
+}
+
 #[cfg(not(target_os = "linux"))]
 async fn execute_action(
     enigo: &mut Enigo,
@@ -25,6 +31,7 @@ async fn execute_action(
             button,
             action: mouse_action,
             position,
+            clicks,
         } => {
             if let Some((x, y)) = position {
                 enigo
@@ -40,16 +47,22 @@ async fn execute_action(
             match mouse_action {
                 MacroMouseAction::Press => {
                     let btn = macro_button_to_enigo(button)?;
-                    enigo
-                        .button(btn, enigo::Direction::Press)
-                        .map_err(|e| format!("Could not press the mouse button. Details: {}", e))?;
-                    sleep(Duration::from_millis(
-                        (50.0 / multiplier).round().max(1.0) as u64
-                    ))
-                    .await;
-                    enigo.button(btn, enigo::Direction::Release).map_err(|e| {
-                        format!("Could not release the mouse button. Details: {}", e)
-                    })?;
+                    let total = (*clicks).clamp(1, 3) as u32;
+                    for attempt in 0..total {
+                        if attempt > 0 {
+                            sleep(Duration::from_millis(intra_click_gap_ms(multiplier))).await;
+                        }
+                        enigo.button(btn, enigo::Direction::Press).map_err(|e| {
+                            format!("Could not press the mouse button. Details: {}", e)
+                        })?;
+                        sleep(Duration::from_millis(
+                            (50.0 / multiplier).round().max(1.0) as u64
+                        ))
+                        .await;
+                        enigo.button(btn, enigo::Direction::Release).map_err(|e| {
+                            format!("Could not release the mouse button. Details: {}", e)
+                        })?;
+                    }
                 }
                 MacroMouseAction::Hold { duration_ms } => {
                     let btn = macro_button_to_enigo(button)?;
@@ -231,17 +244,25 @@ impl LinuxPlaybackBackend {
         &mut self,
         button: &crate::engine::macro_engine::types::MacroMouseButton,
         action: &MacroMouseAction,
+        clicks: u8,
         multiplier: f64,
     ) -> Result<(), String> {
         let key = macro_button_to_evdev(button);
         match action {
             MacroMouseAction::Press => {
-                Self::emit_key(&mut self.mouse, key, true)?;
-                sleep(Duration::from_millis(
-                    (50.0 / multiplier).round().max(1.0) as u64
-                ))
-                .await;
-                Self::emit_key(&mut self.mouse, key, false)
+                let total = (*clicks).clamp(1, 3) as u32;
+                for attempt in 0..total {
+                    if attempt > 0 {
+                        sleep(Duration::from_millis(intra_click_gap_ms(multiplier))).await;
+                    }
+                    Self::emit_key(&mut self.mouse, key, true)?;
+                    sleep(Duration::from_millis(
+                        (50.0 / multiplier).round().max(1.0) as u64
+                    ))
+                    .await;
+                    Self::emit_key(&mut self.mouse, key, false)?;
+                }
+                Ok(())
             }
             MacroMouseAction::Hold { duration_ms } => {
                 Self::emit_key(&mut self.mouse, key, true)?;
@@ -287,6 +308,7 @@ async fn execute_action(
             button,
             action: mouse_action,
             position,
+            clicks,
         } => {
             if let Some((x, y)) = position {
                 backend.move_mouse(*x, *y)?;
@@ -297,7 +319,7 @@ async fn execute_action(
             }
 
             backend
-                .click_mouse(button, mouse_action, multiplier)
+                .click_mouse(button, mouse_action, *clicks, multiplier)
                 .await?;
         }
         MacroActionConfig::Move { x, y, style } => match style {
@@ -1127,7 +1149,7 @@ async fn playback_loop(
             let action_result = execute_action(&mut linux_backend, action, speed_multiplier).await;
 
             if let Err(e) = action_result {
-                eprintln!("Macro playback error: {}", e);
+                log::error!("Macro playback error: {}", e);
                 let _ = app_handle.emit(
                     "macro-status-changed",
                     serde_json::json!({
@@ -1206,8 +1228,9 @@ fn estimate_actions_duration(actions: &[MacroAction]) -> u64 {
             } => {
                 total += *duration_ms as u64 + 50;
             }
-            MacroActionConfig::Mouse { .. } => {
-                total += 60;
+            MacroActionConfig::Mouse { clicks, .. } => {
+                let extra_clicks = ((*clicks).clamp(1, 3) as u64).saturating_sub(1);
+                total += 60 + extra_clicks * (25 + 50);
             }
             MacroActionConfig::Move { style, .. } => match style {
                 MacroMoveStyle::Instant => {

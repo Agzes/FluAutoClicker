@@ -60,6 +60,7 @@ export type MacroBackendAction = {
 export type MacroMouseDraft = {
     button: string;
     action: "press" | "hold" | "down" | "up";
+    clicks: number;
     positionMode: "current" | "custom";
     x: string;
     y: string;

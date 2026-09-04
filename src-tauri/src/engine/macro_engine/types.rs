@@ -19,6 +19,10 @@ pub enum MacroMouseAction {
     Up,
 }
 
+pub fn default_mouse_clicks() -> u8 {
+    1
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum MacroMoveStyle {
@@ -39,6 +43,8 @@ pub enum MacroActionConfig {
         button: MacroMouseButton,
         action: MacroMouseAction,
         position: Option<(i32, i32)>,
+        #[serde(default = "default_mouse_clicks")]
+        clicks: u8,
     },
     Move {
         x: i32,

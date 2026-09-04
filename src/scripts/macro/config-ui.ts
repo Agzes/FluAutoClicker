@@ -381,6 +381,14 @@ export function setupConfigListeners(type: MacroActionType, container: HTMLEleme
                 if (actEl) actEl.classList.add("active");
             }
 
+            const clicksVal = String(Math.min(3, Math.max(1, Number(existingConfig.clicks) || 1)));
+            const clicksRow = container.querySelector("#cfg-mouse-clicks");
+            if (clicksRow) {
+                clicksRow.querySelectorAll(".toggle-option").forEach(b => b.classList.remove("active"));
+                const clicksEl = clicksRow.querySelector(`.toggle-option[data-value="${clicksVal}"]`);
+                if (clicksEl) clicksEl.classList.add("active");
+            }
+
             const posVal = existingConfig.position;
             const posRow = container.querySelector("#cfg-mouse-pos-toggle");
             if (posRow) {
@@ -509,10 +517,21 @@ export function generateConfigUi(type: MacroActionType): string {
             return `
                 <div class="section-row">
                     <div class="multi-button-row" id="cfg-mouse-btn" style="margin: 0;">
-                        <div class="slide-indicator" style="width: 33.333%; left: 0%;"></div>
+                        <div class="slide-indicator" style="width: 20%; left: 0%;"></div>
                         <button class="multi-btn active" data-value="left">${t("left", "Left")}</button>
                         <button class="multi-btn" data-value="middle">${t("middle", "Middle")}</button>
                         <button class="multi-btn" data-value="right">${t("right", "Right")}</button>
+                        <button class="multi-btn" data-value="front">${t("front", "X1")}</button>
+                        <button class="multi-btn" data-value="back">${t("back", "X2")}</button>
+                    </div>
+                </div>
+
+                <div class="section-row">
+                    <div class="toggle-row" id="cfg-mouse-clicks" style="margin: 0;">
+                        <div class="slide-indicator" style="width: 33.333%; left: 0%;"></div>
+                        <button class="toggle-option active" data-value="1">${t("single", "Single")}</button>
+                        <button class="toggle-option" data-value="2">${t("double", "Double")}</button>
+                        <button class="toggle-option" data-value="3">${t("triple", "Triple")}</button>
                     </div>
                 </div>
 
@@ -721,6 +740,8 @@ export function gatherConfig(type: MacroActionType): MacroActionDraft {
                 document.getElementById("cfg-mouse-btn")?.querySelector(".active")?.getAttribute("data-value") || "left",
             action:
                 (document.getElementById("cfg-mouse-action")?.querySelector(".active")?.getAttribute("data-value") as "press" | "hold" | "down" | "up") || "press",
+            clicks:
+                Math.min(3, Math.max(1, Number(document.getElementById("cfg-mouse-clicks")?.querySelector(".active")?.getAttribute("data-value")) || 1)),
             positionMode:
                 (document.getElementById("cfg-mouse-pos-toggle")?.querySelector(".active")?.getAttribute("data-value") as "current" | "custom") || "current",
             x: (document.getElementById("cfg-mouse-x") as HTMLInputElement | null)?.value || "0",

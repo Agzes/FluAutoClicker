@@ -75,6 +75,7 @@ pub struct MouseSettings {
     pub variation_ms: u32,
     pub button: String,
     pub click_mode: String,
+    pub click_type: String,
     pub hold_duration: u32,
     pub hold_unit: String,
     pub repeat_mode: String,
@@ -92,6 +93,7 @@ impl Default for MouseSettings {
             variation_ms: 0,
             button: "left".to_string(),
             click_mode: "press".to_string(),
+            click_type: "single".to_string(),
             hold_duration: 100,
             hold_unit: "ms".to_string(),
             repeat_mode: "infinite".to_string(),
@@ -365,7 +367,7 @@ impl BackupFile {
     }
 }
 
-fn app_config_root() -> PathBuf {
+pub(crate) fn app_config_root() -> PathBuf {
     dirs::config_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join("FluAutoClicker")
@@ -377,6 +379,10 @@ fn app_config_path() -> PathBuf {
 
 fn profiles_dir() -> PathBuf {
     app_config_root().join("profiles")
+}
+
+fn backups_dir() -> PathBuf {
+    app_config_root().join("backups")
 }
 
 fn profile_path(name: &str) -> PathBuf {
@@ -403,9 +409,103 @@ pub async fn load_config() -> Result<AppConfigFile, String> {
         .await
         .map_err(|e| format!("Failed to read app config: {e}"))?;
 
+    backup_config_if_needed(&raw).await;
+
     serde_json::from_str::<AppConfigFile>(&raw)
         .map(AppConfigFile::migrate)
         .map_err(|e| format!("Failed to parse app config: {e}"))
+}
+
+async fn backup_config_if_needed(raw: &str) {
+    match serde_json::from_str::<serde_json::Value>(raw) {
+        Ok(value) => {
+            let version = value.get("version").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+            if version < CURRENT_CONFIG_VERSION {
+                log::info!("Backing up legacy app config (version {version}) before migration");
+                backup_raw_config_file(&format!("app_config_v{version}"), raw.as_bytes()).await;
+            }
+        }
+        Err(_) => {
+            log::warn!("App config is not valid JSON, backing up corrupt file");
+            backup_raw_config_file("app_config_corrupt", raw.as_bytes()).await;
+        }
+    }
+}
+
+pub(crate) async fn backup_raw_config_file(stem: &str, bytes: &[u8]) -> Option<PathBuf> {
+    backup_bytes_into(&backups_dir(), stem, bytes).await
+}
+
+const MAX_AUTO_BACKUPS_PER_GROUP: usize = 10;
+
+static BACKUP_SEQUENCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+async fn backup_bytes_into(dir: &std::path::Path, stem: &str, bytes: &[u8]) -> Option<PathBuf> {
+    if fs::create_dir_all(dir).await.is_err() {
+        return None;
+    }
+
+    if backup_group_contains_duplicate(dir, stem, bytes).await {
+        return None;
+    }
+
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    let seq = BACKUP_SEQUENCE.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    let path = dir.join(format!("{stem}_{stamp}_{seq:06}.json"));
+    fs::write(&path, bytes).await.ok()?;
+    prune_backup_group(dir, stem).await;
+    Some(path)
+}
+
+async fn backup_group_contains_duplicate(dir: &std::path::Path, stem: &str, bytes: &[u8]) -> bool {
+    let prefix = format!("{stem}_");
+    let Ok(mut entries) = fs::read_dir(dir).await else {
+        return false;
+    };
+    while let Ok(Some(entry)) = entries.next_entry().await {
+        let path = entry.path();
+        let is_group = path
+            .file_name()
+            .and_then(|v| v.to_str())
+            .map(|name| name.starts_with(&prefix) && name.ends_with(".json"))
+            .unwrap_or(false);
+        if is_group && fs::read(&path).await.map(|c| c == bytes).unwrap_or(false) {
+            return true;
+        }
+    }
+    false
+}
+
+async fn prune_backup_group(dir: &std::path::Path, stem: &str) {
+    let prefix = format!("{stem}_");
+    let Ok(mut entries) = fs::read_dir(dir).await else {
+        return;
+    };
+    let mut group = Vec::new();
+    while let Ok(Some(entry)) = entries.next_entry().await {
+        let path = entry.path();
+        let in_group = path
+            .file_name()
+            .and_then(|v| v.to_str())
+            .map(|name| name.starts_with(&prefix) && name.ends_with(".json"))
+            .unwrap_or(false);
+        if in_group {
+            group.push(path);
+        }
+    }
+
+    if group.len() <= MAX_AUTO_BACKUPS_PER_GROUP {
+        return;
+    }
+
+    group.sort();
+    let excess = group.len() - MAX_AUTO_BACKUPS_PER_GROUP;
+    for path in group.into_iter().take(excess) {
+        let _ = fs::remove_file(path).await;
+    }
 }
 
 pub async fn save_config(config: &AppConfigFile) -> Result<(), String> {
@@ -621,5 +721,76 @@ mod tests {
         assert_eq!(normalized.keyboard.repeat_count, 1);
         assert_eq!(normalized.jiggler.interval_ms, 100);
         assert_eq!(normalized.macro_settings.repeat_duration_ms, 1_000);
+    }
+
+    async fn backup_group_paths(dir: &std::path::Path, stem: &str) -> Vec<PathBuf> {
+        let prefix = format!("{stem}_");
+        let mut paths = Vec::new();
+        let mut entries = fs::read_dir(dir).await.unwrap();
+        while let Some(entry) = entries.next_entry().await.unwrap() {
+            let path = entry.path();
+            let name = path.file_name().and_then(|v| v.to_str()).unwrap_or("");
+            if name.starts_with(&prefix) && name.ends_with(".json") {
+                paths.push(path);
+            }
+        }
+        paths.sort();
+        paths
+    }
+
+    #[tokio::test]
+    async fn backup_skips_identical_content_and_keeps_distinct_snapshots() {
+        let dir =
+            std::env::temp_dir().join(format!("fluac_backup_test_dedup_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir).await;
+
+        backup_bytes_into(&dir, "app_config_v1", b"{\"a\":1}").await;
+        backup_bytes_into(&dir, "app_config_v1", b"{\"a\":2}").await;
+        backup_bytes_into(&dir, "app_config_v1", b"{\"a\":1}").await;
+
+        let files = backup_group_paths(&dir, "app_config_v1").await;
+        assert_eq!(files.len(), 2);
+
+        let _ = fs::remove_dir_all(&dir).await;
+    }
+
+    #[tokio::test]
+    async fn backup_retention_prunes_oldest_beyond_limit() {
+        let dir = std::env::temp_dir().join(format!(
+            "fluac_backup_test_retention_{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&dir).await;
+
+        for i in 0..(MAX_AUTO_BACKUPS_PER_GROUP + 3) {
+            backup_bytes_into(&dir, "app_config_v1", format!("{{\"i\":{i}}}").as_bytes()).await;
+        }
+
+        let files = backup_group_paths(&dir, "app_config_v1").await;
+        assert_eq!(files.len(), MAX_AUTO_BACKUPS_PER_GROUP);
+
+        let oldest_kept = fs::read(&files[0]).await.unwrap();
+        assert_eq!(oldest_kept, b"{\"i\":3}".to_vec());
+
+        let _ = fs::remove_dir_all(&dir).await;
+    }
+
+    #[tokio::test]
+    async fn backup_groups_are_pruned_independently() {
+        let dir =
+            std::env::temp_dir().join(format!("fluac_backup_test_groups_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir).await;
+
+        for i in 0..(MAX_AUTO_BACKUPS_PER_GROUP + 1) {
+            backup_bytes_into(&dir, "app_config_v1", format!("{{\"i\":{i}}}").as_bytes()).await;
+        }
+        backup_bytes_into(&dir, "macro_v1", b"{\"m\":1}").await;
+
+        let app_files = backup_group_paths(&dir, "app_config_v1").await;
+        let macro_files = backup_group_paths(&dir, "macro_v1").await;
+        assert_eq!(app_files.len(), MAX_AUTO_BACKUPS_PER_GROUP);
+        assert_eq!(macro_files.len(), 1);
+
+        let _ = fs::remove_dir_all(&dir).await;
     }
 }

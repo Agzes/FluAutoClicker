@@ -53,6 +53,7 @@ export type AppConfigFile = {
         variation_ms: number;
         button: string;
         click_mode: string;
+        click_type: string;
         hold_duration: number;
         hold_unit: string;
         repeat_mode: string;
@@ -131,6 +132,7 @@ function defaultConfig(): AppConfigFile {
             variation_ms: 0,
             button: "left",
             click_mode: "press",
+            click_type: "single",
             hold_duration: 100,
             hold_unit: "ms",
             repeat_mode: "infinite",
@@ -372,6 +374,7 @@ function applyConfigToUi(config: AppConfigFile) {
 
     setActiveButton("mouse-button-toggle", config.mouse.button);
     setActiveButton("press-hold-toggle", config.mouse.click_mode);
+    setActiveButton("mouse-click-type-toggle", config.mouse.click_type);
     setActiveButton("mouse-hold-mode-toggle", config.mouse.hold_unit);
     setActiveButton("repeat-toggle", config.mouse.repeat_mode);
     setActiveButton("finite-mode-toggle", config.mouse.repeat_unit);
@@ -518,6 +521,7 @@ async function captureConfigSnapshot(): Promise<AppConfigFile> {
             variation_ms: getNumericValue("mouse-variation", base.mouse.variation_ms),
             button: getActiveValue("#mouse-button-toggle .multi-btn.active", base.mouse.button),
             click_mode: getActiveValue("#press-hold-toggle .toggle-option.active", base.mouse.click_mode),
+            click_type: getActiveValue("#mouse-click-type-toggle .toggle-option.active", base.mouse.click_type),
             hold_duration: getNumericValue("mouse-hold-duration", base.mouse.hold_duration),
             hold_unit: getActiveValue("#mouse-hold-mode-toggle .toggle-option.active", base.mouse.hold_unit),
             repeat_mode: getActiveValue("#repeat-toggle .toggle-option.active", base.mouse.repeat_mode),

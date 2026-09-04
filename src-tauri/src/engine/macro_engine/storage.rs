@@ -58,6 +58,25 @@ pub async fn load_macro(
         .await
         .map_err(|e| format!("Failed to read macro file: {}", e))?;
 
+    match serde_json::from_str::<serde_json::Value>(&json) {
+        Ok(value) => {
+            let version = value.get("version").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+            if version < MacroFile::CURRENT_VERSION {
+                log::info!("Backing up legacy macro file (version {version}) before migration");
+                crate::engine::config_store::backup_raw_config_file(
+                    &format!("macro_v{version}"),
+                    json.as_bytes(),
+                )
+                .await;
+            }
+        }
+        Err(_) => {
+            log::warn!("Macro file is not valid JSON, backing up corrupt file");
+            crate::engine::config_store::backup_raw_config_file("macro_corrupt", json.as_bytes())
+                .await;
+        }
+    }
+
     let macro_file: MacroFile =
         serde_json::from_str(&json).map_err(|e| format!("Failed to parse macro file: {}", e))?;
 

@@ -41,6 +41,13 @@ export async function syncAllMouseSettings() {
     }
 
     
+    const activeClickType = document.querySelector('#mouse-click-type-toggle .toggle-option.active');
+    if (activeClickType) {
+        const value = (activeClickType as HTMLElement).dataset.value;
+        if (value) await invoke("set_click_type", { clickType: value });
+    }
+
+    
     const holdDuration = parseInt((document.getElementById('mouse-hold-duration') as HTMLInputElement)?.value) || 100;
     await invoke("set_hold_duration", { duration: holdDuration });
 
@@ -88,7 +95,9 @@ export async function syncAllMouseSettings() {
 
 
 export function initMouseSettings() {
-    
+
+    void applyExtendedButtonVisibility();
+
     const mouseButtonRow = document.getElementById('mouse-button-toggle');
     if (mouseButtonRow) {
         const buttons = mouseButtonRow.querySelectorAll('.multi-btn');
@@ -111,6 +120,20 @@ export function initMouseSettings() {
                 const value = (opt as HTMLElement).dataset.value;
                 if (value) {
                     invoke("set_click_mode", { mode: value });
+                }
+            });
+        });
+    }
+
+    
+    const clickTypeToggle = document.getElementById('mouse-click-type-toggle');
+    if (clickTypeToggle) {
+        const options = clickTypeToggle.querySelectorAll('.toggle-option');
+        options.forEach(opt => {
+            opt.addEventListener('click', () => {
+                const value = (opt as HTMLElement).dataset.value;
+                if (value) {
+                    invoke("set_click_type", { clickType: value });
                 }
             });
         });
@@ -290,4 +313,22 @@ export function initMouseSettings() {
         const payload = event.payload as { error?: string };
         notify(payload?.error || t("capture_failed", "Failed to capture cursor position"), "error", 3200);
     });
+}
+
+async function applyExtendedButtonVisibility() {
+    const capabilities = await getPlatformCapabilities();
+    const supported = capabilities.extended_mouse_buttons !== false;
+
+    document.querySelectorAll<HTMLElement>('[data-capability-toggle="extended_mouse_buttons"]').forEach((btn) => {
+        btn.style.display = supported ? "" : "none";
+    });
+
+    if (!supported) {
+        const row = document.getElementById('mouse-button-toggle');
+        const active = row?.querySelector<HTMLElement>('.multi-btn.active');
+        if (active && (active.dataset.value === 'front' || active.dataset.value === 'back')) {
+            active.classList.remove('active');
+            row?.querySelector<HTMLElement>('[data-value="left"]')?.classList.add('active');
+        }
+    }
 }

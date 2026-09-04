@@ -14,6 +14,8 @@ const MIN_INTERVAL_US: u32 = 50;
 #[cfg(not(target_os = "linux"))]
 const MIN_INTERVAL_US: u32 = 650;
 
+const INTRA_CLICK_GAP_MS: u64 = 25;
+
 #[cfg(not(target_os = "linux"))]
 use enigo::{Button, Coordinate, Direction};
 
@@ -70,12 +72,19 @@ async fn perform_click(device: &mut evdev::uinput::VirtualDevice, state: &AppSta
 
     match mode {
         ClickMode::Press => {
-            let _ = device.emit(&[
-                InputEvent::new(EventType::KEY, key.0, 1),
-                InputEvent::new(EventType::SYNCHRONIZATION, 0, 0),
-                InputEvent::new(EventType::KEY, key.0, 0),
-                InputEvent::new(EventType::SYNCHRONIZATION, 0, 0),
-            ]);
+            let clicks = *state.click_type.lock().await;
+            for i in 0..clicks.clicks_per_cycle() {
+                if i > 0 {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(INTRA_CLICK_GAP_MS))
+                        .await;
+                }
+                let _ = device.emit(&[
+                    InputEvent::new(EventType::KEY, key.0, 1),
+                    InputEvent::new(EventType::SYNCHRONIZATION, 0, 0),
+                    InputEvent::new(EventType::KEY, key.0, 0),
+                    InputEvent::new(EventType::SYNCHRONIZATION, 0, 0),
+                ]);
+            }
         }
         ClickMode::Hold => {
             let hold_duration = state.hold_duration.load(Ordering::SeqCst);
@@ -111,7 +120,14 @@ async fn perform_click(enigo: &mut Enigo, state: &AppState) {
 
     match mode {
         ClickMode::Press => {
-            let _ = enigo.button(enigo_btn, Direction::Click);
+            let clicks = *state.click_type.lock().await;
+            for i in 0..clicks.clicks_per_cycle() {
+                if i > 0 {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(INTRA_CLICK_GAP_MS))
+                        .await;
+                }
+                let _ = enigo.button(enigo_btn, Direction::Click);
+            }
         }
         ClickMode::Hold => {
             let hold_duration = state.hold_duration.load(Ordering::SeqCst);

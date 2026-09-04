@@ -30,6 +30,24 @@ pub enum ClickMode {
 }
 
 #[derive(Clone, Copy, Default, PartialEq)]
+pub enum ClickType {
+    #[default]
+    Single,
+    Double,
+    Triple,
+}
+
+impl ClickType {
+    pub fn clicks_per_cycle(self) -> u32 {
+        match self {
+            ClickType::Single => 1,
+            ClickType::Double => 2,
+            ClickType::Triple => 3,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Default, PartialEq)]
 pub enum RepeatMode {
     #[default]
     Infinite,
@@ -274,6 +292,7 @@ pub struct AppState {
 
     pub mouse_button: Mutex<MouseButton>,
     pub click_mode: Mutex<ClickMode>,
+    pub click_type: Mutex<ClickType>,
     pub hold_duration: AtomicU32,
     pub hold_unit: Mutex<HoldUnit>,
     pub repeat_mode: Mutex<RepeatMode>,
@@ -332,6 +351,7 @@ impl Default for AppState {
 
             mouse_button: Mutex::new(MouseButton::Left),
             click_mode: Mutex::new(ClickMode::Press),
+            click_type: Mutex::new(ClickType::Single),
             hold_duration: AtomicU32::new(100),
             hold_unit: Mutex::new(HoldUnit::Milliseconds),
             repeat_mode: Mutex::new(RepeatMode::Infinite),

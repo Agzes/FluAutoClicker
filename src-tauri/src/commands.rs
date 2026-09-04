@@ -4,8 +4,8 @@ use crate::engine::config_store::{
     MIN_JIGGLER_DISTANCE, MIN_JIGGLER_INTERVAL_MS, MIN_MACRO_REPEAT_DURATION_MS, MIN_REPEAT_COUNT,
 };
 use crate::engine::state::{
-    AppState, ClickMode, HoldUnit, JigglerPattern, KeyboardModifier, MouseButton, PositionMode,
-    RepeatMode, RepeatUnit, RuntimeHotkeys,
+    AppState, ClickMode, ClickType, HoldUnit, JigglerPattern, KeyboardModifier, MouseButton,
+    PositionMode, RepeatMode, RepeatUnit, RuntimeHotkeys,
 };
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use enigo::{Enigo, Mouse, Settings};
@@ -783,6 +783,20 @@ pub async fn set_click_mode(
 }
 
 #[tauri::command]
+pub async fn set_click_type(
+    state: tauri::State<'_, Arc<AppState>>,
+    click_type: String,
+) -> Result<(), String> {
+    let parsed = match click_type.as_str() {
+        "double" => ClickType::Double,
+        "triple" => ClickType::Triple,
+        _ => ClickType::Single,
+    };
+    *state.click_type.lock().await = parsed;
+    Ok(())
+}
+
+#[tauri::command]
 pub fn set_hold_duration(state: State<'_, Arc<AppState>>, duration: u32) {
     state.hold_duration.store(
         clamp_u32(duration, MIN_HOLD_DURATION, MAX_HOLD_DURATION),
@@ -878,6 +892,7 @@ pub fn get_platform_capabilities() -> serde_json::Value {
         "window_acrylic": crate::window_acrylic_supported(),
         "system_startup": crate::system_startup_supported(),
         "global_hotkeys": crate::global_hotkeys_supported(),
+        "extended_mouse_buttons": !cfg!(target_os = "macos"),
         "wayland": crate::is_wayland_session(),
         "os": std::env::consts::OS,
         "uinput_available": linux_uinput_available(),
@@ -1318,10 +1333,21 @@ fn current_cursor_position() -> Result<(i32, i32), String> {
 fn sanitize_macro_action_config(config: &mut MacroActionConfig) {
     match config {
         MacroActionConfig::Mouse {
+            clicks,
             action: MacroMouseAction::Hold { duration_ms },
             ..
+        } => {
+            *clicks = (*clicks).clamp(1, 3);
+            *duration_ms = clamp_u32(
+                *duration_ms,
+                MIN_MACRO_ACTION_DURATION_MS,
+                MAX_MACRO_ACTION_DURATION_MS,
+            );
         }
-        | MacroActionConfig::Keyboard {
+        MacroActionConfig::Mouse { clicks, .. } => {
+            *clicks = (*clicks).clamp(1, 3);
+        }
+        MacroActionConfig::Keyboard {
             action: MacroKeyboardAction::Hold { duration_ms },
             ..
         } => {
@@ -1709,7 +1735,7 @@ pub async fn get_macro_actions(
             "id": action.id,
             "timestamp_ms": action.timestamp_ms,
             "config": match &action.config {
-                MacroActionConfig::Mouse { button, action: mouse_action, position } => {
+                MacroActionConfig::Mouse { button, action: mouse_action, position, clicks } => {
                     serde_json::json!({
                         "type": "mouse",
                         "button": match button {
@@ -1726,6 +1752,7 @@ pub async fn get_macro_actions(
                             MacroMouseAction::Up => "up".to_string(),
                         },
                         "position": position.map(|(x, y)| format!("{},{}", x, y)),
+                        "clicks": *clicks,
                     })
                 }
                 MacroActionConfig::Move { x, y, style } => {

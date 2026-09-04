@@ -10,8 +10,8 @@ use crate::engine::config_store::AppConfigFile;
 use crate::engine::macro_engine::recording::record_local_macro_event;
 use crate::engine::macro_engine::types::MacroPlayerState;
 use crate::engine::state::{
-    AppState, ClickMode, HoldUnit, JigglerPattern, KeyboardModifier, MouseButton, PositionMode,
-    RepeatMode, RepeatUnit, RuntimeHotkeys,
+    AppState, ClickMode, ClickType, HoldUnit, JigglerPattern, KeyboardModifier, MouseButton,
+    PositionMode, RepeatMode, RepeatUnit, RuntimeHotkeys,
 };
 use tauri::menu::MenuBuilder;
 use tauri::tray::{
@@ -20,6 +20,9 @@ use tauri::tray::{
 use tauri::{AppHandle, Emitter, Manager, WindowEvent};
 use tauri_plugin_cli::CliExt;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+
+use log::{debug, error, info, warn, LevelFilter};
+use tauri_plugin_log::{RotationStrategy, Target, TargetKind};
 
 #[cfg(target_os = "windows")]
 mod raw_acrylic {
@@ -271,6 +274,10 @@ fn hotkeys_from_state(state: &Arc<AppState>) -> RuntimeHotkeys {
 }
 
 fn set_clicker_running(app: &AppHandle, state: &Arc<AppState>, running: bool) {
+    debug!(
+        "Mouse clicker {}",
+        if running { "started" } else { "stopped" }
+    );
     state.is_running.store(running, Ordering::SeqCst);
     if running {
         crate::commands::prepare_ozone_for_clicker_start(state, app, false);
@@ -308,6 +315,15 @@ fn running_mode_from_state(state: &Arc<AppState>) -> Option<String> {
 }
 
 async fn set_mode_running(app: AppHandle, state: Arc<AppState>, mode: String, running: bool) {
+    debug!(
+        "Mode '{}' {}",
+        mode,
+        if running {
+            "start requested"
+        } else {
+            "stop requested"
+        }
+    );
     match mode.as_str() {
         "keyboard" => {
             state.kb_is_running.store(running, Ordering::SeqCst);
@@ -478,6 +494,11 @@ pub(crate) async fn apply_config_to_state(state: &Arc<AppState>, config: &AppCon
         "hold" => ClickMode::Hold,
         _ => ClickMode::Press,
     };
+    *state.click_type.lock().await = match config.mouse.click_type.as_str() {
+        "double" => ClickType::Double,
+        "triple" => ClickType::Triple,
+        _ => ClickType::Single,
+    };
     *state.hold_unit.lock().await = match config.mouse.hold_unit.as_str() {
         "s" => HoldUnit::Seconds,
         _ => HoldUnit::Milliseconds,
@@ -616,6 +637,10 @@ pub(crate) fn register_runtime_hotkeys(
 
 async fn toggle_macro_recording_from_hotkey(app: AppHandle, state: Arc<AppState>) {
     let player_state = state.macro_engine.player_state.lock().await.clone();
+    debug!(
+        "Macro recording hotkey toggled (player_state: {:?})",
+        player_state
+    );
     let result = if player_state == MacroPlayerState::Recording {
         crate::engine::macro_engine::recording::stop_recording(&state.macro_engine, app.clone())
             .await
@@ -637,7 +662,26 @@ pub fn run() {
     let state = Arc::new(AppState::default());
     let state_clone = state.clone();
 
+    let log_dir = crate::engine::config_store::app_config_root().join("logs");
+
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .targets([
+                    Target::new(TargetKind::Stdout),
+                    Target::new(TargetKind::Folder {
+                        path: log_dir,
+                        file_name: Some("fluautoclicker".into()),
+                    }),
+                ])
+                .level(if cfg!(debug_assertions) {
+                    LevelFilter::Debug
+                } else {
+                    LevelFilter::Info
+                })
+                .rotation_strategy(RotationStrategy::KeepAll)
+                .build(),
+        )
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
@@ -655,8 +699,10 @@ pub fn run() {
                             ShortcutState::Pressed => {
                                 let running_mode = running_mode_from_state(&state);
                                 let was_running_before_press = running_mode.is_some();
-                                let mode = running_mode.unwrap_or_else(|| active_mode_from_state(&state));
-                                if let Ok(mut press_state) = state.toggle_hotkey_press_state.lock() {
+                                let mode =
+                                    running_mode.unwrap_or_else(|| active_mode_from_state(&state));
+                                if let Ok(mut press_state) = state.toggle_hotkey_press_state.lock()
+                                {
                                     *press_state =
                                         Some(crate::engine::state::ToggleHotkeyPressState {
                                             started_at: std::time::Instant::now(),
@@ -807,6 +853,7 @@ pub fn run() {
             get_start_on_system_startup,
             set_mouse_button,
             set_click_mode,
+            set_click_type,
             set_hold_duration,
             set_hold_unit,
             set_repeat_mode,
@@ -873,28 +920,36 @@ pub fn run() {
                 let _ = apply_window_acrylic(&main_window, Some(true));
             }
             if let Err(error) = setup_tray(app) {
-                eprintln!("FluAutoClicker: failed to initialize tray icon: {error}");
+                error!("FluAutoClicker: failed to initialize tray icon: {error}");
             }
 
             let loaded_config = tauri::async_runtime::block_on(async {
-                crate::engine::config_store::load_config()
-                    .await
-                    .unwrap_or_default()
+                match crate::engine::config_store::load_config().await {
+                    Ok(config) => config,
+                    Err(load_error) => {
+                        error!("Failed to load app config, using defaults: {load_error}");
+                        Default::default()
+                    }
+                }
             });
+            info!("App config loaded (version {})", loaded_config.version);
             tauri::async_runtime::block_on(apply_config_to_state(&state, &loaded_config));
             tauri::async_runtime::block_on(async {
-                if let Ok((actions, repeat_mode, recording_options)) =
-                    crate::engine::macro_engine::storage::load_macro().await
-                {
-                    let max_id = actions.iter().map(|action| action.id).max().unwrap_or(0);
+                match crate::engine::macro_engine::storage::load_macro().await {
+                    Ok((actions, repeat_mode, recording_options)) => {
+                        let max_id = actions.iter().map(|action| action.id).max().unwrap_or(0);
 
-                    *state.macro_engine.actions.lock().await = actions;
-                    *state.macro_engine.repeat_mode.lock().await = repeat_mode;
-                    *state.macro_engine.recording_options.lock().await = recording_options;
-                    state
-                        .macro_engine
-                        .action_id_counter
-                        .store(max_id + 1, Ordering::SeqCst);
+                        *state.macro_engine.actions.lock().await = actions;
+                        *state.macro_engine.repeat_mode.lock().await = repeat_mode;
+                        *state.macro_engine.recording_options.lock().await = recording_options;
+                        state
+                            .macro_engine
+                            .action_id_counter
+                            .store(max_id + 1, Ordering::SeqCst);
+                    }
+                    Err(load_error) => {
+                        warn!("Failed to load macro file: {load_error}");
+                    }
                 }
             });
             state
@@ -911,19 +966,19 @@ pub fn run() {
                 if let Some(device) = crate::engine::uinput::setup_uinput() {
                     let mut device_guard = state.uinput_device.blocking_lock();
                     *device_guard = Some(device);
-                    println!("FluAutoClicker: Virtual mouse device initialized");
+                    info!("Virtual mouse device initialized");
                 } else {
-                    eprintln!("FluAutoClicker: Failed to initialize virtual mouse device - permission denied");
-                    eprintln!("FluAutoClicker: Run 'sudo chmod 666 /dev/uinput' or configure udev rules");
+                    error!("Failed to initialize virtual mouse device - permission denied");
+                    warn!("Run 'sudo chmod 666 /dev/uinput' or configure udev rules");
                 }
 
                 if let Some(kb_device) = crate::engine::keyboard_uinput::setup_keyboard_uinput() {
                     let mut kb_device_guard = state.keyboard_uinput_device.blocking_lock();
                     *kb_device_guard = Some(kb_device);
-                    println!("FluAutoClicker: Virtual keyboard device initialized");
+                    info!("Virtual keyboard device initialized");
                 } else {
-                    eprintln!("FluAutoClicker: Failed to initialize virtual keyboard device - permission denied");
-                    eprintln!("FluAutoClicker: Run 'sudo chmod 666 /dev/uinput' or configure udev rules");
+                    error!("Failed to initialize virtual keyboard device - permission denied");
+                    warn!("Run 'sudo chmod 666 /dev/uinput' or configure udev rules");
                 }
             }
 
@@ -936,7 +991,8 @@ pub fn run() {
             let state_kb = state.clone();
             let app_handle_kb = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                crate::engine::keyboard_clicker::keyboard_clicker_task(state_kb, app_handle_kb).await;
+                crate::engine::keyboard_clicker::keyboard_clicker_task(state_kb, app_handle_kb)
+                    .await;
             });
 
             let state_jig = state.clone();
@@ -951,6 +1007,7 @@ pub fn run() {
             );
 
             if register_runtime_hotkeys(app.handle(), &loaded_hotkeys).is_err() {
+                warn!("Failed to register runtime hotkeys, falling back to defaults");
                 let fallback_hotkeys = RuntimeHotkeys::default();
                 {
                     let mut state_hotkeys = state.hotkeys.blocking_lock();
@@ -958,6 +1015,7 @@ pub fn run() {
                 }
                 let _ = register_runtime_hotkeys(app.handle(), &fallback_hotkeys);
             }
+            info!("FluAutoClicker startup complete");
             Ok(())
         })
         .run(tauri::generate_context!())

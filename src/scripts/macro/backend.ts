@@ -160,6 +160,7 @@ export function fromBackendAction(item: MacroBackendAction): MacroUiAction | nul
         const action = config.action || "press";
         const holdMs = getHoldMs(action);
         const position = typeof config.position === "string" ? config.position : null;
+        const clickCount = Math.min(3, Math.max(1, Number(config.clicks) || 1));
 
         let name = t(`macro.action.${button}_click`, `${capitalize(button)} Click`);
         if (holdMs) {
@@ -168,6 +169,9 @@ export function fromBackendAction(item: MacroBackendAction): MacroUiAction | nul
             name = t(`macro.action.${button}_down`, `${capitalize(button)} Down`);
         } else if (action === "up") {
             name = t(`macro.action.${button}_up`, `${capitalize(button)} Up`);
+        }
+        if (!holdMs && action === "press" && clickCount > 1) {
+            name += ` ×${clickCount}`;
         }
 
         return {
@@ -279,6 +283,7 @@ export function toBackendConfig(type: MacroActionType, draft: MacroActionDraft):
             action: mouseDraft.action === "hold"
                 ? { hold: { duration_ms: Math.max(1, Number(mouseDraft.durationMs || 100)) } }
                 : (mouseDraft.action === "down" || mouseDraft.action === "up" ? mouseDraft.action : "press"),
+            clicks: Math.min(3, Math.max(1, Number(mouseDraft.clicks) || 1)),
             position: mouseDraft.positionMode === "current" ? null : [Number(mouseDraft.x || 0), Number(mouseDraft.y || 0)],
         };
     }

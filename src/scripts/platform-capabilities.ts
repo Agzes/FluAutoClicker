@@ -4,6 +4,7 @@ export type PlatformCapabilities = {
     window_acrylic: boolean;
     system_startup: boolean;
     global_hotkeys: boolean;
+    extended_mouse_buttons?: boolean;
     wayland: boolean;
     os?: string;
     uinput_available?: boolean;
