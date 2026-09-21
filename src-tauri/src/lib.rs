@@ -10,8 +10,8 @@ use crate::engine::config_store::AppConfigFile;
 use crate::engine::macro_engine::recording::record_local_macro_event;
 use crate::engine::macro_engine::types::MacroPlayerState;
 use crate::engine::state::{
-    AppState, ClickMode, ClickType, HoldUnit, JigglerPattern, KeyboardModifier, MouseButton,
-    PositionMode, RepeatMode, RepeatUnit, RuntimeHotkeys,
+    AppState, ClickMode, ClickType, HoldUnit, HotkeyAction, JigglerPattern, KeyboardModifier,
+    MouseButton, PositionMode, RepeatMode, RepeatUnit, RuntimeHotkeys,
 };
 use tauri::menu::MenuBuilder;
 use tauri::tray::{
@@ -218,7 +218,27 @@ pub(crate) fn is_wayland_session() -> bool {
 }
 
 pub(crate) fn global_hotkeys_supported() -> bool {
-    !is_wayland_session()
+    #[cfg(target_os = "linux")]
+    {
+        if is_wayland_session() {
+            return crate::engine::hyprland::is_active();
+        }
+    }
+    true
+}
+
+pub(crate) fn hotkey_backend() -> &'static str {
+    #[cfg(target_os = "linux")]
+    {
+        if is_wayland_session() {
+            return if crate::engine::hyprland::is_active() {
+                "hyprland"
+            } else {
+                "unsupported"
+            };
+        }
+    }
+    "native"
 }
 
 pub(crate) fn apply_window_acrylic<W: raw_window_handle::HasWindowHandle + ?Sized>(
@@ -604,10 +624,31 @@ pub(crate) async fn load_and_activate_profile(
     Ok(config)
 }
 
+pub(crate) fn unregister_all_hotkeys(app: &AppHandle) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    {
+        if crate::engine::hyprland::is_active() {
+            crate::engine::hyprland::clear_binds();
+            return Ok(());
+        }
+    }
+
+    app.global_shortcut()
+        .unregister_all()
+        .map_err(|e| format!("failed to clear hotkeys: {e}"))
+}
+
 pub(crate) fn register_runtime_hotkeys(
     app: &AppHandle,
     hotkeys: &RuntimeHotkeys,
 ) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    {
+        if crate::engine::hyprland::is_active() {
+            return crate::engine::hyprland::apply_hotkeys(hotkeys);
+        }
+    }
+
     let manager = app.global_shortcut();
     manager
         .unregister_all()
@@ -617,11 +658,8 @@ pub(crate) fn register_runtime_hotkeys(
         return Ok(());
     }
 
-    for key in [
-        hotkeys.toggle_start_stop.as_str(),
-        hotkeys.pick_position.as_str(),
-        hotkeys.toggle_macro_recording.as_str(),
-    ] {
+    for action in HotkeyAction::ALL {
+        let key = action.shortcut(hotkeys);
         if key.trim().is_empty() {
             continue;
         }
@@ -657,6 +695,98 @@ async fn toggle_macro_recording_from_hotkey(app: AppHandle, state: Arc<AppState>
     }
 }
 
+fn hotkey_action_for(shortcut: &Shortcut, hotkeys: &RuntimeHotkeys) -> Option<HotkeyAction> {
+    HotkeyAction::ALL
+        .into_iter()
+        .find(|action| matches_hotkey(shortcut, action.shortcut(hotkeys)))
+}
+
+pub(crate) fn dispatch_hotkey(app: &AppHandle, action: HotkeyAction, pressed: bool) {
+    debug!("Global hotkey {:?} (pressed: {pressed})", action);
+    let state = app.state::<Arc<AppState>>().inner().clone();
+    if state.hotkeys_suspended.load(Ordering::SeqCst) {
+        return;
+    }
+
+    match action {
+        HotkeyAction::ToggleStartStop => {
+            if pressed {
+                let running_mode = running_mode_from_state(&state);
+                let was_running_before_press = running_mode.is_some();
+                let mode = running_mode.unwrap_or_else(|| active_mode_from_state(&state));
+                if let Ok(mut press_state) = state.toggle_hotkey_press_state.lock() {
+                    *press_state = Some(crate::engine::state::ToggleHotkeyPressState {
+                        started_at: std::time::Instant::now(),
+                        was_running_before_press,
+                        mode: mode.clone(),
+                    });
+                }
+
+                if !was_running_before_press {
+                    let app_handle = app.clone();
+                    let state = state.clone();
+                    tauri::async_runtime::spawn(async move {
+                        set_mode_running(app_handle, state, mode, true).await;
+                    });
+                }
+            } else {
+                let press_snapshot = state
+                    .toggle_hotkey_press_state
+                    .lock()
+                    .ok()
+                    .and_then(|mut guard| guard.take());
+
+                if let Some(press_state) = press_snapshot {
+                    let held_long_enough = press_state.started_at.elapsed().as_millis() >= 250;
+                    let should_stop = if held_long_enough {
+                        !press_state.was_running_before_press
+                    } else {
+                        press_state.was_running_before_press
+                    };
+
+                    if should_stop {
+                        let app_handle = app.clone();
+                        let state = state.clone();
+                        tauri::async_runtime::spawn(async move {
+                            set_mode_running(app_handle, state, press_state.mode, false).await;
+                        });
+                    }
+                }
+            }
+        }
+        HotkeyAction::PickPosition => {
+            if !pressed {
+                return;
+            }
+            let app_handle = app.clone();
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_millis(2500)).await;
+                match crate::commands::pick_cursor_position(Some(0)).await {
+                    Ok(position) => {
+                        let _ = app_handle.emit("cursor-position-picked", position);
+                    }
+                    Err(error) => {
+                        let _ = app_handle.emit(
+                            "cursor-position-pick-failed",
+                            serde_json::json!({ "error": error }),
+                        );
+                    }
+                }
+            });
+        }
+        HotkeyAction::ToggleMacroRecording => {
+            if !pressed {
+                return;
+            }
+            let app_handle = app.clone();
+            let state = state.clone();
+            tauri::async_runtime::spawn(async move {
+                toggle_macro_recording_from_hotkey(app_handle, state).await;
+            });
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let state = Arc::new(AppState::default());
@@ -689,100 +819,9 @@ pub fn run() {
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(move |app, shortcut, event| {
                     let state = app.state::<Arc<AppState>>().inner().clone();
-                    if state.hotkeys_suspended.load(Ordering::SeqCst) {
-                        return;
-                    }
                     let hotkeys = hotkeys_from_state(&state);
-
-                    if matches_hotkey(&shortcut, hotkeys.toggle_start_stop.as_str()) {
-                        match event.state {
-                            ShortcutState::Pressed => {
-                                let running_mode = running_mode_from_state(&state);
-                                let was_running_before_press = running_mode.is_some();
-                                let mode =
-                                    running_mode.unwrap_or_else(|| active_mode_from_state(&state));
-                                if let Ok(mut press_state) = state.toggle_hotkey_press_state.lock()
-                                {
-                                    *press_state =
-                                        Some(crate::engine::state::ToggleHotkeyPressState {
-                                            started_at: std::time::Instant::now(),
-                                            was_running_before_press,
-                                            mode: mode.clone(),
-                                        });
-                                }
-
-                                if !was_running_before_press {
-                                    let app_handle = app.clone();
-                                    let state = state.clone();
-                                    tauri::async_runtime::spawn(async move {
-                                        set_mode_running(app_handle, state, mode, true).await;
-                                    });
-                                }
-                            }
-                            ShortcutState::Released => {
-                                let press_snapshot = state
-                                    .toggle_hotkey_press_state
-                                    .lock()
-                                    .ok()
-                                    .and_then(|mut guard| guard.take());
-
-                                if let Some(press_state) = press_snapshot {
-                                    let held_long_enough =
-                                        press_state.started_at.elapsed().as_millis() >= 250;
-
-                                    let should_stop = if held_long_enough {
-                                        !press_state.was_running_before_press
-                                    } else {
-                                        press_state.was_running_before_press
-                                    };
-
-                                    if should_stop {
-                                        let app_handle = app.clone();
-                                        let state = state.clone();
-                                        tauri::async_runtime::spawn(async move {
-                                            set_mode_running(
-                                                app_handle,
-                                                state,
-                                                press_state.mode,
-                                                false,
-                                            )
-                                            .await;
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                        return;
-                    }
-
-                    if event.state != ShortcutState::Pressed {
-                        return;
-                    }
-
-                    if matches_hotkey(&shortcut, hotkeys.pick_position.as_str()) {
-                        let app_handle = app.clone();
-                        tauri::async_runtime::spawn(async move {
-                            tokio::time::sleep(std::time::Duration::from_millis(2500)).await;
-                            match crate::commands::pick_cursor_position(Some(0)).await {
-                                Ok(position) => {
-                                    let _ = app_handle.emit("cursor-position-picked", position);
-                                }
-                                Err(error) => {
-                                    let _ = app_handle.emit(
-                                        "cursor-position-pick-failed",
-                                        serde_json::json!({ "error": error }),
-                                    );
-                                }
-                            }
-                        });
-                    }
-
-                    if matches_hotkey(&shortcut, hotkeys.toggle_macro_recording.as_str()) {
-                        let app_handle = app.clone();
-                        let state = state.clone();
-                        tauri::async_runtime::spawn(async move {
-                            toggle_macro_recording_from_hotkey(app_handle, state).await;
-                        });
+                    if let Some(action) = hotkey_action_for(&shortcut, &hotkeys) {
+                        dispatch_hotkey(app, action, event.state == ShortcutState::Pressed);
                     }
                 })
                 .build(),
@@ -1006,6 +1045,9 @@ pub fn run() {
                 app.handle().clone(),
             );
 
+            #[cfg(target_os = "linux")]
+            crate::engine::hyprland::init(app.handle().clone());
+
             if register_runtime_hotkeys(app.handle(), &loaded_hotkeys).is_err() {
                 warn!("Failed to register runtime hotkeys, falling back to defaults");
                 let fallback_hotkeys = RuntimeHotkeys::default();
@@ -1018,6 +1060,12 @@ pub fn run() {
             info!("FluAutoClicker startup complete");
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|_app_handle, event| {
+            if let tauri::RunEvent::Exit = event {
+                #[cfg(target_os = "linux")]
+                crate::engine::hyprland::clear_binds();
+            }
+        });
 }

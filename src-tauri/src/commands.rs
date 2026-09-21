@@ -892,6 +892,7 @@ pub fn get_platform_capabilities() -> serde_json::Value {
         "window_acrylic": crate::window_acrylic_supported(),
         "system_startup": crate::system_startup_supported(),
         "global_hotkeys": crate::global_hotkeys_supported(),
+        "hotkey_backend": crate::hotkey_backend(),
         "extended_mouse_buttons": !cfg!(target_os = "macos"),
         "wayland": crate::is_wayland_session(),
         "os": std::env::consts::OS,
@@ -962,9 +963,7 @@ pub fn suspend_hotkeys(state: State<'_, Arc<AppState>>, app: AppHandle) -> Resul
         *press_state = None;
     }
 
-    app.global_shortcut()
-        .unregister_all()
-        .map_err(|e| format!("failed to suspend hotkeys: {e}"))?;
+    crate::unregister_all_hotkeys(&app)?;
 
     Ok(())
 }
@@ -1036,9 +1035,7 @@ pub async fn set_hotkey(
     }
 
     let register_result = if state.hotkeys_suspended.load(Ordering::SeqCst) {
-        app.global_shortcut()
-            .unregister_all()
-            .map_err(|e| format!("failed to keep hotkeys suspended: {e}"))
+        crate::unregister_all_hotkeys(&app)
     } else {
         crate::register_runtime_hotkeys(&app, &next_hotkeys)
     };
@@ -1047,7 +1044,7 @@ pub async fn set_hotkey(
         let mut hotkeys = state.hotkeys.lock().await;
         *hotkeys = previous_hotkeys.clone();
         if state.hotkeys_suspended.load(Ordering::SeqCst) {
-            let _ = app.global_shortcut().unregister_all();
+            let _ = crate::unregister_all_hotkeys(&app);
         } else {
             let _ = crate::register_runtime_hotkeys(&app, &previous_hotkeys);
         }
@@ -1906,10 +1903,7 @@ pub async fn stop_macro_recording(
 pub fn check_hyprland() -> bool {
     #[cfg(target_os = "linux")]
     {
-        let session = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
-        let session_lc = session.to_lowercase();
-        let wayland = std::env::var("WAYLAND_DISPLAY").is_ok();
-        session_lc.contains("hyprland") && wayland
+        crate::engine::hyprland::is_hyprland()
     }
     #[cfg(not(target_os = "linux"))]
     {

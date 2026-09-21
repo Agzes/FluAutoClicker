@@ -1,5 +1,7 @@
 pub mod clicker;
 pub mod config_store;
+#[cfg(target_os = "linux")]
+pub mod hyprland;
 pub mod jiggler;
 pub mod keyboard_clicker;
 pub mod keyboard_uinput;

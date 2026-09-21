@@ -125,6 +125,45 @@ impl Default for RuntimeHotkeys {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum HotkeyAction {
+    ToggleStartStop,
+    PickPosition,
+    ToggleMacroRecording,
+}
+
+impl HotkeyAction {
+    pub const ALL: [HotkeyAction; 3] = [
+        HotkeyAction::ToggleStartStop,
+        HotkeyAction::PickPosition,
+        HotkeyAction::ToggleMacroRecording,
+    ];
+
+    pub fn id(self) -> &'static str {
+        match self {
+            HotkeyAction::ToggleStartStop => "toggle_start_stop",
+            HotkeyAction::PickPosition => "pick_position",
+            HotkeyAction::ToggleMacroRecording => "toggle_macro_recording",
+        }
+    }
+
+    pub fn title(self) -> &'static str {
+        match self {
+            HotkeyAction::ToggleStartStop => "Toggle Start/Stop",
+            HotkeyAction::PickPosition => "Pick Position",
+            HotkeyAction::ToggleMacroRecording => "Macro Recording",
+        }
+    }
+
+    pub fn shortcut(self, hotkeys: &RuntimeHotkeys) -> &str {
+        match self {
+            HotkeyAction::ToggleStartStop => hotkeys.toggle_start_stop.as_str(),
+            HotkeyAction::PickPosition => hotkeys.pick_position.as_str(),
+            HotkeyAction::ToggleMacroRecording => hotkeys.toggle_macro_recording.as_str(),
+        }
+    }
+}
+
 pub struct ToggleHotkeyPressState {
     pub started_at: Instant,
     pub was_running_before_press: bool,

@@ -8,9 +8,9 @@
 
 <img src="docs/readme/fluautoclicker.png" alt="FluAutoClicker">
 
-***A modern, cross-platform, open-source automation tool for mouse clicks, keyboard input, and macros.***
+_**A modern, cross-platform, open-source automation tool for mouse clicks, keyboard input, and macros.**_
 <a href="https://github.com/Agzes/FluAutoClicker/releases/latest">
-  <img src="docs/readme/downloadnow.png" alt="Download FluAutoClicker" style="width:60%; min-width:300px; max-width:800px;">
+<img src="docs/readme/downloadnow.png" alt="Download FluAutoClicker" style="width:60%; min-width:300px; max-width:800px;">
 </a>
 
 </div><br>
@@ -18,7 +18,6 @@
 ## What is FluAutoClicker?
 
 FluAutoClicker is a Rust + Tauri desktop app for fast, configurable input automation. It started as an auto clicker (see [old branch](https://github.com/Agzes/FluAutoClicker/tree/main)), but the current beta is closer to a compact automation suite: mouse clicking, keyboard pressing, macro recording/playback, profiles, global hotkeys, and Linux-oriented input support in the same app.
-
 
 ## Features
 
@@ -69,11 +68,11 @@ Macros can be recorded, edited, duplicated, reordered with drag-and-drop, saved,
 
 ## Platform Support
 
-| Platform | Status | Notes |
-| --- | --- | --- |
-| Windows | Supported | Main development target. Acrylic window effects, startup registration, tray, hotkeys, mouse mode, keyboard mode, and macro playback are supported. |
-| Linux | Beta support | CI builds AppImage, DEB, and RPM artifacts. Mouse and keyboard automation use `/dev/uinput`; permissions may need to be granted. Global hotkeys are disabled on Wayland sessions. |
-| macOS | Source-level | Tauri and the input backend can target macOS, but no release builds are currently published by this repository. Not tested, not guaranteed to work. |
+| Platform | Status       | Notes                                                                                                                                                                                                                                                                               |
+| -------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Windows  | Supported    | Main development target. Acrylic window effects, startup registration, tray, hotkeys, mouse mode, keyboard mode, and macro playback are supported.                                                                                                                                  |
+| Linux    | Beta support | CI builds AppImage, DEB, and RPM artifacts. Mouse and keyboard automation use `/dev/uinput`; permissions may need to be granted. Global hotkeys work on X11 and on Hyprland (through its `hyprland-global-shortcuts-v1` protocol). Other Wayland compositors are not supported yet. |
+| macOS    | Source-level | Tauri and the input backend can target macOS, but no release builds are currently published by this repository. Not tested, not guaranteed to work.                                                                                                                                 |
 
 ### Linux uinput permissions
 
@@ -97,11 +96,11 @@ For daily use, prefer a udev rule instead of changing permissions manually after
 
 Default runtime hotkeys: (can be changed in UI)
 
-| Action | Default |
-| --- | --- |
-| Toggle active mode start/stop | `F6` |
-| Pick cursor position | `Ctrl+P` |
-| Toggle macro recording | `Ctrl+Shift+R` |
+| Action                        | Default        |
+| ----------------------------- | -------------- |
+| Toggle active mode start/stop | `F6`           |
+| Pick cursor position          | `Ctrl+P`       |
+| Toggle macro recording        | `Ctrl+Shift+R` |
 
 The app also exposes command-line switches through the Tauri CLI plugin: (beta)
 
@@ -129,7 +128,7 @@ Release automation currently produces:
 Requirements:
 
 - Rust stable (rustup recommended)
-- Node.js 20+ 
+- Node.js 20+
 - pnpm 9+ (you can try use npm, but not recommended)
 - Platform dependencies required by Tauri (webview2 on windows, libgtk3-dev on linux, or other, check Tauri docs)
 

@@ -250,7 +250,7 @@ impl LinuxPlaybackBackend {
         let key = macro_button_to_evdev(button);
         match action {
             MacroMouseAction::Press => {
-                let total = (*clicks).clamp(1, 3) as u32;
+                let total = clicks.clamp(1, 3) as u32;
                 for attempt in 0..total {
                     if attempt > 0 {
                         sleep(Duration::from_millis(intra_click_gap_ms(multiplier))).await;

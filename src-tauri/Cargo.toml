@@ -43,6 +43,9 @@ tauri-plugin-global-shortcut = "2"
 input-linux = "0.7"
 input-linux-sys = "0.7"
 evdev = "0.12"
+wayland-client = "0.31"
+wayland-backend = "0.3"
+wayland-scanner = "0.31"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 window-vibrancy = "0.6"
