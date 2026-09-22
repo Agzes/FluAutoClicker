@@ -8,7 +8,9 @@
     "typecheck": "tsc --noEmit",
     "smoke:static": "node scripts/smoke-static.mjs",
     "smoke:i18n": "node scripts/smoke-i18n.mjs",
-    "lint": "pnpm run typecheck && pnpm run smoke:static && pnpm run smoke:i18n && pnpm run version:check && cargo fmt --manifest-path src-tauri/Cargo.toml --check",
+    "lint": "pnpm run typecheck && pnpm run lint:js && pnpm run lint:css && pnpm run smoke:static && pnpm run smoke:i18n && pnpm run version:check && cargo fmt --manifest-path src-tauri/Cargo.toml --check",
+    "lint:js": "eslint .",
+    "lint:css": "stylelint \"src/**/*.css\"",
     "version:sync": "node scripts/sync-version.mjs",
     "version:check": "node scripts/sync-version.mjs --check",
     "budget": "node scripts/check-bundle-budget.mjs",
@@ -23,8 +25,14 @@
     "@tauri-apps/plugin-opener": "^2"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@tauri-apps/cli": "^2",
+    "eslint": "^10.11.0",
+    "globals": "^17.12.0",
+    "stylelint": "^17.15.0",
+    "stylelint-config-standard": "^40.0.0",
     "typescript": "~5.6.2",
+    "typescript-eslint": "^8.70.1",
     "vite": "^6.0.3"
   }
 }
