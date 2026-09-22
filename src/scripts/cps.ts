@@ -33,7 +33,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     let startTime = 0;
     let duration = 5;
     let timer: any = null;
-    let facts: string[] = t("cps.facts", "Rust ensures blazing speed and safety.|Crafted with love and ∞ cups of tea.|It will always be free and open-source.|Personalize your UI with dynamic themes.|Ultralight code minimizes system usage.|Star FluAutoClicker on github.").split("|").map(s => s.trim());
+    const facts: string[] = t("cps.facts", "Rust ensures blazing speed and safety.|Crafted with love and ∞ cups of tea.|It will always be free and open-source.|Personalize your UI with dynamic themes.|Ultralight code minimizes system usage.|Star FluAutoClicker on github.").split("|").map(s => s.trim());
     let lastCps = 0;
 
     

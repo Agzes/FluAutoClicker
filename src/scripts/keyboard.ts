@@ -12,7 +12,7 @@ function isModifierLabel(label: string): boolean {
 
 
 let isRecording = false;
-let recordingModifiers: Set<string> = new Set();
+const recordingModifiers: Set<string> = new Set();
 let recordingCallback: ((mainKey: string, modifiers: string[]) => void) | null = null;
 
 export function initKeyboard() {
@@ -29,7 +29,7 @@ export function initKeyboard() {
     
     let selectedMainKey: string | null = null;
     let selectedMainElement: HTMLElement | null = null;
-    let selectedModifiers: Set<string> = new Set();
+    const selectedModifiers: Set<string> = new Set();
 
     function readSelectionFromActiveKeys() {
         selectedMainKey = null;

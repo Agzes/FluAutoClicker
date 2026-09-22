@@ -86,9 +86,9 @@ function hsvToHex({ h, s, v }: HsvColor) {
     const hueSegment = h / 60;
     const x = chroma * (1 - Math.abs((hueSegment % 2) - 1));
     const match = v - chroma;
-    let red = 0;
-    let green = 0;
-    let blue = 0;
+    let red: number;
+    let green: number;
+    let blue: number;
 
     if (hueSegment >= 0 && hueSegment < 1) [red, green, blue] = [chroma, x, 0];
     else if (hueSegment < 2) [red, green, blue] = [x, chroma, 0];

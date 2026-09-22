@@ -305,7 +305,7 @@ function initSpeedMultiplierUi() {
     if (!speedToggle) return;
 
     const updateSpeed = async (presetVal: string) => {
-        let multiplier = 1.0;
+        let multiplier: number;
         if (presetVal === "custom") {
             if (customWrapper) {
                 customWrapper.classList.remove("disabled");
@@ -352,7 +352,7 @@ function initSpeedMultiplierUi() {
         (window as any).flu_macro_speed_multiplier = multiplier;
         const presets = ["1", "2", "5", "10", "100"];
         const presetStr = String(multiplier);
-        let activeBtn: HTMLElement | null = null;
+        let activeBtn: HTMLElement | null;
         if (presets.includes(presetStr)) {
             activeBtn = speedToggle.querySelector(`.toggle-option[data-value="${presetStr}"]`);
             if (customWrapper) {

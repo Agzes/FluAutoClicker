@@ -104,7 +104,7 @@ async function refreshProfiles() {
                 errorMessage: t("error.could_not_load_active_profile", "Could not load active profile"),
             }),
         ]);
-        activeProfile = (config.active_profile || "default") && profiles.includes(config.active_profile || "")
+        activeProfile = profiles.includes(config.active_profile || "")
             ? config.active_profile!
             : profiles[0] || "default";
         profileEntries = await loadAllProfiles(profiles);

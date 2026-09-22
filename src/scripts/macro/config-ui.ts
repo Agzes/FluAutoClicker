@@ -362,7 +362,7 @@ export function setupConfigListeners(type: MacroActionType, container: HTMLEleme
                 if (btnEl) btnEl.classList.add("active");
             }
 
-            let actVal = "press";
+            let actVal: string;
             const holdMs = getHoldMs(existingConfig.action);
             if (holdMs !== null) {
                 actVal = "hold";
@@ -448,7 +448,7 @@ export function setupConfigListeners(type: MacroActionType, container: HTMLEleme
         initKeyboardConfigUi(existingConfig);
 
         if (existingConfig && existingConfig.type === "keyboard") {
-            let actVal = "press";
+            let actVal: string;
             const holdMs = getHoldMs(existingConfig.action);
             if (holdMs !== null) {
                 actVal = "hold";

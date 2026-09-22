@@ -75,7 +75,7 @@ const SYSTEM_FONTS: FontFace[] = [
 
 const ALL_AVAILABLE = [...BUILTIN_FONTS, ...SYSTEM_FONTS, ...GOOGLE_FONTS];
 
-let importedFonts: FontFace[] = [];
+const importedFonts: FontFace[] = [];
 const downloadedGoogleFonts = new Set<string>();
 const searchedGoogleFonts = new Map<string, FontFace>();
 let searchTimeoutId: number | null = null;
@@ -564,7 +564,7 @@ async function downloadGoogleFont(font: FontFace): Promise<void> {
 
         notify(`"${font.name}" downloaded`, "success", 1800);
         emitFontListUpdate();
-    } catch (error) {
+    } catch {
         font.status = "ready";
         notify(`Failed to download "${font.name}"`, "error", 2800);
         emitFontListUpdate();
@@ -846,7 +846,7 @@ export function initFonts(): void {
             if (pickerTarget === "app") setFontApp(id);
             else setFontLoc(id);
             updateFontNames();
-        } catch (error) {
+        } catch {
             notify("Failed to import font", "error", 2800);
         }
     }
