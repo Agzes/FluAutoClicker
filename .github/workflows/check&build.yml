@@ -3,7 +3,10 @@ name: Check & Build
 on:
   pull_request:
     paths:
-      - ".github/workflows/check&build.yml"
+      - ".github/workflows/**"
+      - "scripts/**"
+      - "eslint.config.js"
+      - ".stylelintrc.json"
       - "package.json"
       - "pnpm-lock.yaml"
       - "tsconfig.json"
@@ -14,7 +17,10 @@ on:
     branches:
       - next
     paths:
-      - ".github/workflows/check&build.yml"
+      - ".github/workflows/**"
+      - "scripts/**"
+      - "eslint.config.js"
+      - ".stylelintrc.json"
       - "package.json"
       - "pnpm-lock.yaml"
       - "tsconfig.json"
