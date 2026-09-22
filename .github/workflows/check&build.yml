@@ -25,6 +25,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: check-build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build (${{ matrix.name }})
@@ -149,3 +153,50 @@ jobs:
           path: |
             ${{ matrix.binary-path }}
             src-tauri/target/release/bundle/**
+
+  publish-nightly:
+    name: Publish nightly
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/next'
+    permissions:
+      contents: write
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          path: artifacts
+
+      - name: Prepare assets
+        run: |
+          mkdir -p nightly
+          while IFS= read -r -d '' f; do
+            case "$f" in
+              *.AppImage) cp "$f" nightly/FluAutoClicker-nightly-linux-x86_64.AppImage ;;
+              *.deb) cp "$f" nightly/FluAutoClicker-nightly-linux-x86_64.deb ;;
+              *.rpm) cp "$f" nightly/FluAutoClicker-nightly-linux-x86_64.rpm ;;
+              *.exe) cp "$f" nightly/FluAutoClicker-nightly-windows-x86_64.exe ;;
+              *fluautoclicker) cp "$f" nightly/FluAutoClicker-nightly-linux-x86_64 ;;
+            esac
+          done < <(find artifacts -type f -print0)
+          chmod +x nightly/FluAutoClicker-nightly-linux-x86_64 nightly/*.AppImage
+          cd nightly
+          sha256sum * > SHA256SUMS.txt
+
+      - name: Publish nightly release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "Nightly build from \`next\` @ ${GITHUB_SHA:0:7} ($(date -u +%Y-%m-%d))."
+            echo
+            echo "Automated build, may be broken. CI run:"
+            echo "https://github.com/${GITHUB_REPOSITORY}/actions?query=branch%3Anext"
+          } > nightly-notes.md
+          gh release delete nightly --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
+          gh release create nightly nightly/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "nightly $(date -u +%Y-%m-%d)" \
+            --notes-file nightly-notes.md
