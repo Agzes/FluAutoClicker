@@ -13,14 +13,7 @@
   transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.kb-container {
-  display: flex;
-  width: 135%; 
-  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
 .kb-container.numpad-active {
-  transform: translateX(-26%); 
   transform: translateX(-25.925%); 
 }
 

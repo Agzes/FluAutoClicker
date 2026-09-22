@@ -50,7 +50,7 @@
 
 .icon {
     font-family: "LucideIcons" !important;
-    speak: none;
+    speak: never;
     font-style: normal;
     font-weight: normal;
     font-variant: normal;

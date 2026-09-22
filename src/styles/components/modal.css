@@ -1431,15 +1431,6 @@
     color: #ff6666;
 }
 
-.font-source-badge {
-    font-size: 9px;
-    font-weight: 600;
-    color: var(--text-muted);
-    pointer-events: none;
-    flex-shrink: 0;
-    opacity: 0.6;
-}
-
 .font-role-badge {
     display: flex;
     align-items: center;

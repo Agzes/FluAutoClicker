@@ -512,7 +512,7 @@
 }
 
 .profiles-list .profile-list-item.active .profile-list-name {
-    color: var(--text);
+    color: var(--text-muted);
     font-weight: 600;
     font-size: 12px;
     padding: 0 8px;
@@ -548,10 +548,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-.profiles-list .profile-list-item.active .profile-list-name {
-    color: var(--text-muted);
 }
 
 .profiles-list .profile-list-item.active .feature-btn.profile-act-btn {
@@ -1133,39 +1129,6 @@ input:checked + .slider-toggle:before {
 }
 
 .num-input-group label {
-    font-size: 10px;
-    color: var(--text-label);
-    font-weight: 300;
-    font-family: var(--font);
-}
-
-.num-input {
-    width: 100%;
-    background: var(--control-bg);
-    border: none;
-    border-radius: var(--radius);
-    padding: 8px;
-    color: var(--text);
-    font-family: var(--font);
-    font-size: 18px;
-    font-weight: 400;
-    text-align: center;
-    outline: none;
-    transition: var(--transition);
-    -moz-appearance: textfield;
-    appearance: textfield;
-}
-
-.num-input::-webkit-outer-spin-button,
-.num-input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-.num-input:focus {
-    color: var(--accent);
-}
-num-input-group label {
     font-size: 10px;
     color: var(--text-label);
     font-weight: 300;
