@@ -1354,16 +1354,17 @@ fn sanitize_macro_action_config(config: &mut MacroActionConfig) {
                 MAX_MACRO_ACTION_DURATION_MS,
             );
         }
-        MacroActionConfig::Move { style, .. } => match style {
-            MacroMoveStyle::Linear { duration_ms } | MacroMoveStyle::Smooth { duration_ms, .. } => {
-                *duration_ms = clamp_u32(
-                    *duration_ms,
-                    MIN_MACRO_ACTION_DURATION_MS,
-                    MAX_MACRO_ACTION_DURATION_MS,
-                );
-            }
-            _ => {}
-        },
+        MacroActionConfig::Move {
+            style:
+                MacroMoveStyle::Linear { duration_ms } | MacroMoveStyle::Smooth { duration_ms, .. },
+            ..
+        } => {
+            *duration_ms = clamp_u32(
+                *duration_ms,
+                MIN_MACRO_ACTION_DURATION_MS,
+                MAX_MACRO_ACTION_DURATION_MS,
+            );
+        }
         MacroActionConfig::Sleep { duration_ms } => {
             *duration_ms = clamp_u32(
                 *duration_ms,

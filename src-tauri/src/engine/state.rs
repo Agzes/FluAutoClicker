@@ -172,7 +172,7 @@ pub struct ToggleHotkeyPressState {
 
 impl KeyboardModifier {
     #[cfg(target_os = "linux")]
-    pub fn to_keys(&self) -> Vec<Key> {
+    pub fn to_keys(self) -> Vec<Key> {
         let mut keys = Vec::new();
 
         if self.has_ctrl() {
@@ -285,7 +285,7 @@ impl KeyboardModifier {
     }
 
     #[allow(dead_code)]
-    pub fn to_display_string(&self) -> String {
+    pub fn to_display_string(self) -> String {
         match self {
             KeyboardModifier::None => "".to_string(),
             KeyboardModifier::Ctrl => "Ctrl".to_string(),

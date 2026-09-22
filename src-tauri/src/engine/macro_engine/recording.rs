@@ -20,9 +20,12 @@ const MIN_SLEEP_MS: u64 = 25;
 const MOVE_THRESHOLD_PX: i32 = 2;
 const MOVE_MERGE_WINDOW_MS: u64 = 125;
 const SMOOTH_MOVE_MERGE_WINDOW_MS: u64 = 500;
+// TODO#19
+#[allow(dead_code)]
 const HOLD_THRESHOLD_MS: u64 = 160;
 
 #[derive(Clone)]
+#[allow(dead_code)]
 struct PressSnapshot {
     started_at: SystemTime,
     position: Option<(i32, i32)>,
@@ -308,12 +311,7 @@ fn handle_recording_event(
             }
 
             if !is_raw_mode {
-                let threshold =
-                    if recording_options.record_mouse_moves == MacroRecordMouseMovesMode::Smooth {
-                        MOVE_THRESHOLD_PX
-                    } else {
-                        MOVE_THRESHOLD_PX
-                    };
+                let threshold = MOVE_THRESHOLD_PX;
                 if let Some((prev_x, prev_y)) = previous_pointer {
                     let delta_x = (prev_x - x).abs();
                     let delta_y = (prev_y - y).abs();
@@ -800,6 +798,7 @@ fn rdev_key_to_macro(key: &RdevKey) -> Option<String> {
     Some(key.to_string())
 }
 
+#[allow(dead_code)]
 fn normalize_recorded_text(raw: Option<&str>) -> Option<String> {
     let text = raw?.trim_matches('\0').trim();
     if text.is_empty() || text.chars().any(|ch| ch.is_control()) {
@@ -808,6 +807,7 @@ fn normalize_recorded_text(raw: Option<&str>) -> Option<String> {
     Some(text.to_string())
 }
 
+#[allow(dead_code)]
 fn normalize_recorded_modifiers(modifiers: &[String], text: Option<&str>) -> Vec<String> {
     let _ = text;
     modifiers.to_vec()
@@ -899,161 +899,151 @@ pub async fn record_local_macro_event(
         let mut should_merge_id = None;
 
         match event_type.as_str() {
-            "mouse_move" => {
-                if recording_options.record_mouse_moves != MacroRecordMouseMovesMode::Off {
-                    let x = cx;
-                    let y = cy;
+            "mouse_move"
+                if recording_options.record_mouse_moves != MacroRecordMouseMovesMode::Off =>
+            {
+                let x = cx;
+                let y = cy;
 
-                    let mut delta_ok = true;
-                    if let Some((prev_x, prev_y)) = previous_pointer {
-                        let delta_x = (prev_x - x).abs();
-                        let delta_y = (prev_y - y).abs();
-                        if delta_x < MOVE_THRESHOLD_PX && delta_y < MOVE_THRESHOLD_PX {
-                            delta_ok = false;
+                let mut delta_ok = true;
+                if let Some((prev_x, prev_y)) = previous_pointer {
+                    let delta_x = (prev_x - x).abs();
+                    let delta_y = (prev_y - y).abs();
+                    if delta_x < MOVE_THRESHOLD_PX && delta_y < MOVE_THRESHOLD_PX {
+                        delta_ok = false;
+                    }
+                }
+
+                if delta_ok {
+                    let should_merge = context
+                        .last_move_recorded_at
+                        .and_then(|last| event_time.duration_since(last).ok())
+                        .map(|elapsed| elapsed <= Duration::from_millis(MOVE_MERGE_WINDOW_MS))
+                        .unwrap_or(false);
+
+                    if should_merge {
+                        if let Some(action_id) = context.last_move_action_id {
+                            should_merge_id = Some(action_id);
                         }
                     }
 
-                    if delta_ok {
-                        let should_merge = context
-                            .last_move_recorded_at
-                            .and_then(|last| event_time.duration_since(last).ok())
-                            .map(|elapsed| elapsed <= Duration::from_millis(MOVE_MERGE_WINDOW_MS))
-                            .unwrap_or(false);
-
-                        if should_merge {
-                            if let Some(action_id) = context.last_move_action_id {
-                                should_merge_id = Some(action_id);
+                    if should_merge_id.is_none() {
+                        let style = match recording_options.record_mouse_moves {
+                            MacroRecordMouseMovesMode::Instant => {
+                                context.last_move_start_time = None;
+                                MacroMoveStyle::Instant
                             }
-                        }
-
-                        if should_merge_id.is_none() {
-                            let style = match recording_options.record_mouse_moves {
-                                MacroRecordMouseMovesMode::Instant => {
-                                    context.last_move_start_time = None;
-                                    MacroMoveStyle::Instant
+                            MacroRecordMouseMovesMode::Linear => {
+                                context.last_move_start_time = Some(event_time);
+                                MacroMoveStyle::Linear { duration_ms: 50 }
+                            }
+                            MacroRecordMouseMovesMode::Smooth => {
+                                context.last_move_start_time = Some(event_time);
+                                MacroMoveStyle::Smooth {
+                                    path: vec![(x, y)],
+                                    duration_ms: 50,
                                 }
-                                MacroRecordMouseMovesMode::Linear => {
-                                    context.last_move_start_time = Some(event_time);
-                                    MacroMoveStyle::Linear { duration_ms: 50 }
-                                }
-                                MacroRecordMouseMovesMode::Smooth => {
-                                    context.last_move_start_time = Some(event_time);
-                                    MacroMoveStyle::Smooth {
-                                        path: vec![(x, y)],
-                                        duration_ms: 50,
-                                    }
-                                }
-                                MacroRecordMouseMovesMode::Raw | MacroRecordMouseMovesMode::Off => {
-                                    context.last_move_start_time = None;
-                                    MacroMoveStyle::Instant
-                                }
-                            };
-                            main_action = Some(MacroActionConfig::Move { x, y, style });
-                        }
+                            }
+                            MacroRecordMouseMovesMode::Raw | MacroRecordMouseMovesMode::Off => {
+                                context.last_move_start_time = None;
+                                MacroMoveStyle::Instant
+                            }
+                        };
+                        main_action = Some(MacroActionConfig::Move { x, y, style });
                     }
                 }
             }
-            "mouse_down" => {
-                if recording_options.record_mouse_clicks {
-                    if let Some(btn_str) = button {
-                        if let Some(button) = string_to_macro_button(&btn_str) {
-                            if !context.pressed_mouse.contains_key(&button) {
-                                let snapshot = PressSnapshot {
-                                    started_at: event_time,
-                                    position: last_pointer,
-                                    modifiers: Vec::new(),
-                                    text: None,
-                                };
-                                context.pressed_mouse.insert(button.clone(), snapshot);
-
-                                main_action = Some(MacroActionConfig::Mouse {
-                                    button,
-                                    action: MacroMouseAction::Down,
-                                    position: if recording_options.record_click_position {
-                                        last_pointer
-                                    } else {
-                                        None
-                                    },
-                                    clicks: 1,
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-            "mouse_up" => {
-                if recording_options.record_mouse_clicks {
-                    if let Some(btn_str) = button {
-                        if let Some(button) = string_to_macro_button(&btn_str) {
-                            if context.pressed_mouse.remove(&button).is_some() {
-                                main_action = Some(MacroActionConfig::Mouse {
-                                    button,
-                                    action: MacroMouseAction::Up,
-                                    position: if recording_options.record_click_position {
-                                        last_pointer
-                                    } else {
-                                        None
-                                    },
-                                    clicks: 1,
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-            "key_down" => {
-                if recording_options.record_keyboard {
-                    if let Some(key_name) = key {
-                        if !context.pressed_keys.contains_key(&key_name) {
+            "mouse_down" if recording_options.record_mouse_clicks => {
+                if let Some(btn_str) = button {
+                    if let Some(button) = string_to_macro_button(&btn_str) {
+                        if !context.pressed_mouse.contains_key(&button) {
                             let snapshot = PressSnapshot {
                                 started_at: event_time,
-                                position: None,
+                                position: last_pointer,
                                 modifiers: Vec::new(),
                                 text: None,
                             };
-                            context.pressed_keys.insert(key_name.clone(), snapshot);
+                            context.pressed_mouse.insert(button.clone(), snapshot);
 
-                            main_action = Some(MacroActionConfig::Keyboard {
-                                key: key_name,
-                                text: None,
-                                modifiers: Vec::new(),
-                                action: MacroKeyboardAction::Down,
+                            main_action = Some(MacroActionConfig::Mouse {
+                                button,
+                                action: MacroMouseAction::Down,
+                                position: if recording_options.record_click_position {
+                                    last_pointer
+                                } else {
+                                    None
+                                },
+                                clicks: 1,
                             });
                         }
                     }
                 }
             }
-            "key_up" => {
-                if recording_options.record_keyboard {
-                    if let Some(key_name) = key {
-                        if context.pressed_keys.remove(&key_name).is_some() {
-                            main_action = Some(MacroActionConfig::Keyboard {
-                                key: key_name,
-                                text: None,
-                                modifiers: Vec::new(),
-                                action: MacroKeyboardAction::Up,
+            "mouse_up" if recording_options.record_mouse_clicks => {
+                if let Some(btn_str) = button {
+                    if let Some(button) = string_to_macro_button(&btn_str) {
+                        if context.pressed_mouse.remove(&button).is_some() {
+                            main_action = Some(MacroActionConfig::Mouse {
+                                button,
+                                action: MacroMouseAction::Up,
+                                position: if recording_options.record_click_position {
+                                    last_pointer
+                                } else {
+                                    None
+                                },
+                                clicks: 1,
                             });
                         }
+                    }
+                }
+            }
+            "key_down" if recording_options.record_keyboard => {
+                if let Some(key_name) = key {
+                    if !context.pressed_keys.contains_key(&key_name) {
+                        let snapshot = PressSnapshot {
+                            started_at: event_time,
+                            position: None,
+                            modifiers: Vec::new(),
+                            text: None,
+                        };
+                        context.pressed_keys.insert(key_name.clone(), snapshot);
+
+                        main_action = Some(MacroActionConfig::Keyboard {
+                            key: key_name,
+                            text: None,
+                            modifiers: Vec::new(),
+                            action: MacroKeyboardAction::Down,
+                        });
+                    }
+                }
+            }
+            "key_up" if recording_options.record_keyboard => {
+                if let Some(key_name) = key {
+                    if context.pressed_keys.remove(&key_name).is_some() {
+                        main_action = Some(MacroActionConfig::Keyboard {
+                            key: key_name,
+                            text: None,
+                            modifiers: Vec::new(),
+                            action: MacroKeyboardAction::Up,
+                        });
                     }
                 }
             }
             _ => {}
         }
 
-        if main_action.is_some() || should_merge_id.is_some() {
-            if recording_options.record_delays {
-                if let Some(last_recorded_at) = context.last_recorded_at {
-                    let elapsed_ms = event_time
-                        .duration_since(last_recorded_at)
-                        .unwrap_or_default()
-                        .as_millis() as u64;
+        if (main_action.is_some() || should_merge_id.is_some()) && recording_options.record_delays {
+            if let Some(last_recorded_at) = context.last_recorded_at {
+                let elapsed_ms = event_time
+                    .duration_since(last_recorded_at)
+                    .unwrap_or_default()
+                    .as_millis() as u64;
 
-                    if elapsed_ms >= MIN_SLEEP_MS
-                        && recording_options.record_mouse_moves != MacroRecordMouseMovesMode::Raw
-                    {
-                        let duration_ms = elapsed_ms.min(u32::MAX as u64) as u32;
-                        sleep_config = Some(MacroActionConfig::Sleep { duration_ms });
-                    }
+                if elapsed_ms >= MIN_SLEEP_MS
+                    && recording_options.record_mouse_moves != MacroRecordMouseMovesMode::Raw
+                {
+                    let duration_ms = elapsed_ms.min(u32::MAX as u64) as u32;
+                    sleep_config = Some(MacroActionConfig::Sleep { duration_ms });
                 }
             }
         }

@@ -86,33 +86,28 @@ pub struct MacroAction {
     pub config: MacroActionConfig,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
 pub enum MacroRepeatMode {
+    #[default]
     Infinite,
-    FiniteTimes { count: u32 },
-    FiniteSeconds { duration_ms: u64 },
-}
-
-impl Default for MacroRepeatMode {
-    fn default() -> Self {
-        MacroRepeatMode::Infinite
-    }
+    FiniteTimes {
+        count: u32,
+    },
+    FiniteSeconds {
+        duration_ms: u64,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum MacroRecordMouseMovesMode {
     Off,
+    #[default]
     Instant,
     Linear,
     Smooth,
     Raw,
-}
-
-impl Default for MacroRecordMouseMovesMode {
-    fn default() -> Self {
-        Self::Instant
-    }
 }
 
 fn deserialize_mouse_moves<'de, D>(deserializer: D) -> Result<MacroRecordMouseMovesMode, D::Error>
@@ -182,15 +177,10 @@ impl Default for MacroRecordingOptions {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)]
 pub enum MacroPlayerState {
+    #[default]
     Stopped,
     Playing,
     Recording,
-}
-
-impl Default for MacroPlayerState {
-    fn default() -> Self {
-        MacroPlayerState::Stopped
-    }
 }

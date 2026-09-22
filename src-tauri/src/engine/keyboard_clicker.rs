@@ -277,7 +277,7 @@ fn enigo_press_key(enigo: &mut Enigo, _key_str: &str, key: Key, direction: Direc
 #[cfg(target_os = "linux")]
 async fn perform_keyboard_press(device: &mut evdev::uinput::VirtualDevice, state: &AppState) {
     let key_str = state.keyboard_key.lock().await.clone();
-    let modifiers = state.keyboard_modifiers.lock().await.clone();
+    let modifiers = *state.keyboard_modifiers.lock().await;
     let mode = *state.kb_click_mode.lock().await;
 
     let key = (!key_str.trim().is_empty())
@@ -352,142 +352,6 @@ async fn perform_keyboard_press(device: &mut evdev::uinput::VirtualDevice, state
                 ]);
             }
         }
-    }
-}
-
-#[cfg(not(target_os = "linux"))]
-async fn perform_keyboard_press(enigo: &mut Enigo, state: &AppState) {
-    let key_str = state.keyboard_key.lock().await.clone();
-    let modifiers = state.keyboard_modifiers.lock().await.clone();
-    let mode = *state.kb_click_mode.lock().await;
-
-    let key = (!key_str.trim().is_empty()).then(|| string_to_enigo_key(&key_str));
-    let enigo_mod_keys = modifier_to_enigo_keys(modifiers);
-
-    if key.is_none() && enigo_mod_keys.is_empty() {
-        return;
-    }
-
-    match mode {
-        ClickMode::Press => {
-            for &mod_key in &enigo_mod_keys {
-                let _ = enigo.key(mod_key, Direction::Press);
-            }
-
-            if let Some(key) = key {
-                enigo_press_key(enigo, &key_str, key, Direction::Click);
-            }
-
-            for &mod_key in enigo_mod_keys.iter().rev() {
-                let _ = enigo.key(mod_key, Direction::Release);
-            }
-        }
-        ClickMode::Hold => {
-            let hold_duration = state.kb_hold_duration.load(Ordering::SeqCst);
-            let unit = *state.kb_hold_unit.lock().await;
-            let duration_ms = match unit {
-                HoldUnit::Milliseconds => hold_duration,
-                HoldUnit::Seconds => hold_duration * 1000,
-            };
-
-            for &mod_key in &enigo_mod_keys {
-                let _ = enigo.key(mod_key, Direction::Press);
-            }
-
-            if let Some(key) = key {
-                enigo_press_key(enigo, &key_str, key, Direction::Press);
-            }
-
-            tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms as u64)).await;
-
-            if let Some(key) = key {
-                enigo_press_key(enigo, &key_str, key, Direction::Release);
-            }
-
-            for &mod_key in enigo_mod_keys.iter().rev() {
-                let _ = enigo.key(mod_key, Direction::Release);
-            }
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[cfg(target_os = "linux")]
-    #[test]
-    fn linux_key_mapping_covers_ui_keys() {
-        for key in [
-            "a",
-            "z",
-            "0",
-            "9",
-            "f1",
-            "f12",
-            "escape",
-            "space",
-            "enter",
-            "tab",
-            "backspace",
-            "delete",
-            "insert",
-            "home",
-            "end",
-            "pageup",
-            "pagedown",
-            "up",
-            "down",
-            "left",
-            "right",
-            "grave",
-            "minus",
-            "equal",
-            "leftbrace",
-            "rightbrace",
-            "backslash",
-            "semicolon",
-            "apostrophe",
-            "comma",
-            "dot",
-            "slash",
-            "kp0",
-            "kp9",
-            "kpenter",
-            "kpplus",
-            "kpminus",
-            "kpasterisk",
-            "kpdot",
-            "kpslash",
-            "numlock",
-            "capslock",
-            "ctrl",
-            "shift",
-            "alt",
-            "win",
-        ] {
-            assert!(
-                string_to_key(key).is_some(),
-                "{key} should map to an evdev key"
-            );
-        }
-    }
-
-    #[cfg(not(target_os = "linux"))]
-    #[test]
-    fn modifier_keys_use_runtime_order() {
-        assert_eq!(
-            modifier_to_enigo_keys(KeyboardModifier::CtrlShiftAltWin),
-            vec![Key::Control, Key::Alt, Key::Shift, Key::Meta]
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[test]
-    fn windows_letters_use_physical_scan_codes() {
-        assert_eq!(windows_letter_scan("f"), Some(0x21));
-        assert_eq!(windows_letter_scan("F"), Some(0x21));
-        assert_eq!(windows_letter_scan("f1"), None);
     }
 }
 
@@ -628,5 +492,141 @@ pub async fn keyboard_clicker_task(state: Arc<AppState>, app: AppHandle) {
             start_time = std::time::Instant::now();
             tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
         }
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+async fn perform_keyboard_press(enigo: &mut Enigo, state: &AppState) {
+    let key_str = state.keyboard_key.lock().await.clone();
+    let modifiers = state.keyboard_modifiers.lock().await.clone();
+    let mode = *state.kb_click_mode.lock().await;
+
+    let key = (!key_str.trim().is_empty()).then(|| string_to_enigo_key(&key_str));
+    let enigo_mod_keys = modifier_to_enigo_keys(modifiers);
+
+    if key.is_none() && enigo_mod_keys.is_empty() {
+        return;
+    }
+
+    match mode {
+        ClickMode::Press => {
+            for &mod_key in &enigo_mod_keys {
+                let _ = enigo.key(mod_key, Direction::Press);
+            }
+
+            if let Some(key) = key {
+                enigo_press_key(enigo, &key_str, key, Direction::Click);
+            }
+
+            for &mod_key in enigo_mod_keys.iter().rev() {
+                let _ = enigo.key(mod_key, Direction::Release);
+            }
+        }
+        ClickMode::Hold => {
+            let hold_duration = state.kb_hold_duration.load(Ordering::SeqCst);
+            let unit = *state.kb_hold_unit.lock().await;
+            let duration_ms = match unit {
+                HoldUnit::Milliseconds => hold_duration,
+                HoldUnit::Seconds => hold_duration * 1000,
+            };
+
+            for &mod_key in &enigo_mod_keys {
+                let _ = enigo.key(mod_key, Direction::Press);
+            }
+
+            if let Some(key) = key {
+                enigo_press_key(enigo, &key_str, key, Direction::Press);
+            }
+
+            tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms as u64)).await;
+
+            if let Some(key) = key {
+                enigo_press_key(enigo, &key_str, key, Direction::Release);
+            }
+
+            for &mod_key in enigo_mod_keys.iter().rev() {
+                let _ = enigo.key(mod_key, Direction::Release);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn linux_key_mapping_covers_ui_keys() {
+        for key in [
+            "a",
+            "z",
+            "0",
+            "9",
+            "f1",
+            "f12",
+            "escape",
+            "space",
+            "enter",
+            "tab",
+            "backspace",
+            "delete",
+            "insert",
+            "home",
+            "end",
+            "pageup",
+            "pagedown",
+            "up",
+            "down",
+            "left",
+            "right",
+            "grave",
+            "minus",
+            "equal",
+            "leftbrace",
+            "rightbrace",
+            "backslash",
+            "semicolon",
+            "apostrophe",
+            "comma",
+            "dot",
+            "slash",
+            "kp0",
+            "kp9",
+            "kpenter",
+            "kpplus",
+            "kpminus",
+            "kpasterisk",
+            "kpdot",
+            "kpslash",
+            "numlock",
+            "capslock",
+            "ctrl",
+            "shift",
+            "alt",
+            "win",
+        ] {
+            assert!(
+                string_to_key(key).is_some(),
+                "{key} should map to an evdev key"
+            );
+        }
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    #[test]
+    fn modifier_keys_use_runtime_order() {
+        assert_eq!(
+            modifier_to_enigo_keys(KeyboardModifier::CtrlShiftAltWin),
+            vec![Key::Control, Key::Alt, Key::Shift, Key::Meta]
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn windows_letters_use_physical_scan_codes() {
+        assert_eq!(windows_letter_scan("f"), Some(0x21));
+        assert_eq!(windows_letter_scan("F"), Some(0x21));
+        assert_eq!(windows_letter_scan("f1"), None);
     }
 }

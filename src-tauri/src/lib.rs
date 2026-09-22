@@ -820,7 +820,7 @@ pub fn run() {
                 .with_handler(move |app, shortcut, event| {
                     let state = app.state::<Arc<AppState>>().inner().clone();
                     let hotkeys = hotkeys_from_state(&state);
-                    if let Some(action) = hotkey_action_for(&shortcut, &hotkeys) {
+                    if let Some(action) = hotkey_action_for(shortcut, &hotkeys) {
                         dispatch_hotkey(app, action, event.state == ShortcutState::Pressed);
                     }
                 })
