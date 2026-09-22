@@ -1,0 +1,39 @@
+name: Dependencies
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/deps.yml"
+      - "src-tauri/Cargo.toml"
+      - "src-tauri/Cargo.lock"
+  push:
+    branches:
+      - next
+    paths:
+      - ".github/workflows/deps.yml"
+      - "src-tauri/Cargo.toml"
+      - "src-tauri/Cargo.lock"
+  schedule:
+    - cron: "23 5 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    name: cargo-audit + cargo-machete
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: taiki-e/install-action@dfae9bf3d6f6c6f20ef4ebb3486c01a51341ff12 # v2.87.18
+        with:
+          tool: cargo-audit,cargo-machete
+
+      - name: Security audit
+        run: cargo audit
+        working-directory: src-tauri
+
+      - name: Unused dependencies
+        run: cargo machete
+        working-directory: src-tauri
