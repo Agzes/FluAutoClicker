@@ -81,6 +81,16 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: src-tauri
+
+      - uses: taiki-e/install-action@dfae9bf3d6f6c6f20ef4ebb3486c01a51341ff12 # v2.87.18
+        with:
+          tool: taplo
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -88,20 +98,38 @@ jobs:
       - name: Typecheck
         run: pnpm run typecheck
 
+      - name: ESLint
+        run: pnpm run lint:js
+
+      - name: Stylelint
+        run: pnpm run lint:css
+
       - name: Static smoke check
         run: pnpm run smoke:static
 
       - name: i18n smoke check
         run: pnpm run smoke:i18n
 
+      - name: Version check
+        run: pnpm run version:check
+
       - name: Rust format check
         run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
+
+      - name: TOML format check
+        run: taplo check src-tauri/Cargo.toml
+
+      - name: Rust clippy
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 
       - name: Rust tests
         run: cargo test --manifest-path src-tauri/Cargo.toml
 
       - name: Build frontend
         run: pnpm run build
+
+      - name: Bundle budget
+        run: pnpm run budget
 
       - name: Build Tauri app
         shell: pwsh
