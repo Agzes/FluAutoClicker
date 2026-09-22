@@ -4,4 +4,4 @@ if [[ "$XDG_CURRENT_DESKTOP" == "Hyprland" ]] || pgrep -x "Hyprland" > /dev/null
     export WEBKIT_DISABLE_DMABUF_RENDERER=1
 fi
 
-npm run tauri dev
+pnpm run tauri dev
