@@ -53,10 +53,10 @@ mod raw_acrylic {
 
     #[link(name = "kernel32")]
     extern "system" {
-        fn GetModuleHandleA(name: *const u8) -> *mut std::ffi::c_void;
+        fn GetModuleHandleA(name: *const std::ffi::c_char) -> *mut std::ffi::c_void;
         fn GetProcAddress(
             module: *mut std::ffi::c_void,
-            name: *const u8,
+            name: *const std::ffi::c_char,
         ) -> Option<unsafe extern "system" fn()>;
     }
 
@@ -68,16 +68,13 @@ mod raw_acrylic {
         }
 
         unsafe {
-            let user32 = GetModuleHandleA(b"user32.dll\0".as_ptr() as *const u8);
+            let user32 = GetModuleHandleA(c"user32.dll".as_ptr());
             if user32.is_null() {
                 let _ = SWCA.set(None);
                 return None;
             }
 
-            let ptr = GetProcAddress(
-                user32,
-                b"SetWindowCompositionAttribute\0".as_ptr() as *const u8,
-            );
+            let ptr = GetProcAddress(user32, c"SetWindowCompositionAttribute".as_ptr());
 
             let func: Option<SetWindowCompositionAttributeFn> = ptr.map(|p| std::mem::transmute(p));
 

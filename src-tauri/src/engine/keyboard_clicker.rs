@@ -498,7 +498,7 @@ pub async fn keyboard_clicker_task(state: Arc<AppState>, app: AppHandle) {
 #[cfg(not(target_os = "linux"))]
 async fn perform_keyboard_press(enigo: &mut Enigo, state: &AppState) {
     let key_str = state.keyboard_key.lock().await.clone();
-    let modifiers = state.keyboard_modifiers.lock().await.clone();
+    let modifiers = *state.keyboard_modifiers.lock().await;
     let mode = *state.kb_click_mode.lock().await;
 
     let key = (!key_str.trim().is_empty()).then(|| string_to_enigo_key(&key_str));

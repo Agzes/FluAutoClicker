@@ -139,6 +139,7 @@ impl HotkeyAction {
         HotkeyAction::ToggleMacroRecording,
     ];
 
+    #[cfg(target_os = "linux")]
     pub fn id(self) -> &'static str {
         match self {
             HotkeyAction::ToggleStartStop => "toggle_start_stop",
@@ -147,6 +148,7 @@ impl HotkeyAction {
         }
     }
 
+    #[cfg(target_os = "linux")]
     pub fn title(self) -> &'static str {
         match self {
             HotkeyAction::ToggleStartStop => "Toggle Start/Stop",
