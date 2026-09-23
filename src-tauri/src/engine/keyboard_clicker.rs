@@ -7,215 +7,215 @@ use tauri::{AppHandle, Emitter};
 const WINDOWS_MAX_TOTAL_CPS: u32 = 650;
 
 #[cfg(not(target_os = "linux"))]
-use enigo::{Direction, Enigo, Key, Keyboard, Settings};
+use enigo::{Direction, Enigo, Key as KeyCode, Keyboard, Settings};
 
 #[cfg(not(target_os = "linux"))]
 use crate::engine::state::KeyboardModifier;
 
 #[cfg(target_os = "linux")]
-use evdev::{EventType, InputEvent, Key};
+use evdev::{EventType, InputEvent, KeyCode};
 
 #[cfg(target_os = "linux")]
-fn string_to_key(key_str: &str) -> Option<Key> {
+fn string_to_key(key_str: &str) -> Option<KeyCode> {
     match key_str.to_lowercase().as_str() {
-        "a" => Some(Key::KEY_A),
-        "b" => Some(Key::KEY_B),
-        "c" => Some(Key::KEY_C),
-        "d" => Some(Key::KEY_D),
-        "e" => Some(Key::KEY_E),
-        "f" => Some(Key::KEY_F),
-        "g" => Some(Key::KEY_G),
-        "h" => Some(Key::KEY_H),
-        "i" => Some(Key::KEY_I),
-        "j" => Some(Key::KEY_J),
-        "k" => Some(Key::KEY_K),
-        "l" => Some(Key::KEY_L),
-        "m" => Some(Key::KEY_M),
-        "n" => Some(Key::KEY_N),
-        "o" => Some(Key::KEY_O),
-        "p" => Some(Key::KEY_P),
-        "q" => Some(Key::KEY_Q),
-        "r" => Some(Key::KEY_R),
-        "s" => Some(Key::KEY_S),
-        "t" => Some(Key::KEY_T),
-        "u" => Some(Key::KEY_U),
-        "v" => Some(Key::KEY_V),
-        "w" => Some(Key::KEY_W),
-        "x" => Some(Key::KEY_X),
-        "y" => Some(Key::KEY_Y),
-        "z" => Some(Key::KEY_Z),
+        "a" => Some(KeyCode::KEY_A),
+        "b" => Some(KeyCode::KEY_B),
+        "c" => Some(KeyCode::KEY_C),
+        "d" => Some(KeyCode::KEY_D),
+        "e" => Some(KeyCode::KEY_E),
+        "f" => Some(KeyCode::KEY_F),
+        "g" => Some(KeyCode::KEY_G),
+        "h" => Some(KeyCode::KEY_H),
+        "i" => Some(KeyCode::KEY_I),
+        "j" => Some(KeyCode::KEY_J),
+        "k" => Some(KeyCode::KEY_K),
+        "l" => Some(KeyCode::KEY_L),
+        "m" => Some(KeyCode::KEY_M),
+        "n" => Some(KeyCode::KEY_N),
+        "o" => Some(KeyCode::KEY_O),
+        "p" => Some(KeyCode::KEY_P),
+        "q" => Some(KeyCode::KEY_Q),
+        "r" => Some(KeyCode::KEY_R),
+        "s" => Some(KeyCode::KEY_S),
+        "t" => Some(KeyCode::KEY_T),
+        "u" => Some(KeyCode::KEY_U),
+        "v" => Some(KeyCode::KEY_V),
+        "w" => Some(KeyCode::KEY_W),
+        "x" => Some(KeyCode::KEY_X),
+        "y" => Some(KeyCode::KEY_Y),
+        "z" => Some(KeyCode::KEY_Z),
 
-        "0" => Some(Key::KEY_0),
-        "1" => Some(Key::KEY_1),
-        "2" => Some(Key::KEY_2),
-        "3" => Some(Key::KEY_3),
-        "4" => Some(Key::KEY_4),
-        "5" => Some(Key::KEY_5),
-        "6" => Some(Key::KEY_6),
-        "7" => Some(Key::KEY_7),
-        "8" => Some(Key::KEY_8),
-        "9" => Some(Key::KEY_9),
+        "0" => Some(KeyCode::KEY_0),
+        "1" => Some(KeyCode::KEY_1),
+        "2" => Some(KeyCode::KEY_2),
+        "3" => Some(KeyCode::KEY_3),
+        "4" => Some(KeyCode::KEY_4),
+        "5" => Some(KeyCode::KEY_5),
+        "6" => Some(KeyCode::KEY_6),
+        "7" => Some(KeyCode::KEY_7),
+        "8" => Some(KeyCode::KEY_8),
+        "9" => Some(KeyCode::KEY_9),
 
-        "f1" => Some(Key::KEY_F1),
-        "f2" => Some(Key::KEY_F2),
-        "f3" => Some(Key::KEY_F3),
-        "f4" => Some(Key::KEY_F4),
-        "f5" => Some(Key::KEY_F5),
-        "f6" => Some(Key::KEY_F6),
-        "f7" => Some(Key::KEY_F7),
-        "f8" => Some(Key::KEY_F8),
-        "f9" => Some(Key::KEY_F9),
-        "f10" => Some(Key::KEY_F10),
-        "f11" => Some(Key::KEY_F11),
-        "f12" => Some(Key::KEY_F12),
+        "f1" => Some(KeyCode::KEY_F1),
+        "f2" => Some(KeyCode::KEY_F2),
+        "f3" => Some(KeyCode::KEY_F3),
+        "f4" => Some(KeyCode::KEY_F4),
+        "f5" => Some(KeyCode::KEY_F5),
+        "f6" => Some(KeyCode::KEY_F6),
+        "f7" => Some(KeyCode::KEY_F7),
+        "f8" => Some(KeyCode::KEY_F8),
+        "f9" => Some(KeyCode::KEY_F9),
+        "f10" => Some(KeyCode::KEY_F10),
+        "f11" => Some(KeyCode::KEY_F11),
+        "f12" => Some(KeyCode::KEY_F12),
 
-        "escape" | "esc" => Some(Key::KEY_ESC),
-        "space" => Some(Key::KEY_SPACE),
-        "enter" | "return" => Some(Key::KEY_ENTER),
-        "tab" => Some(Key::KEY_TAB),
-        "backspace" | "back" => Some(Key::KEY_BACKSPACE),
-        "delete" | "del" => Some(Key::KEY_DELETE),
-        "insert" | "ins" => Some(Key::KEY_INSERT),
-        "home" => Some(Key::KEY_HOME),
-        "end" => Some(Key::KEY_END),
-        "pageup" | "page_up" | "pgup" => Some(Key::KEY_PAGEUP),
-        "pagedown" | "page_down" | "pgdn" => Some(Key::KEY_PAGEDOWN),
+        "escape" | "esc" => Some(KeyCode::KEY_ESC),
+        "space" => Some(KeyCode::KEY_SPACE),
+        "enter" | "return" => Some(KeyCode::KEY_ENTER),
+        "tab" => Some(KeyCode::KEY_TAB),
+        "backspace" | "back" => Some(KeyCode::KEY_BACKSPACE),
+        "delete" | "del" => Some(KeyCode::KEY_DELETE),
+        "insert" | "ins" => Some(KeyCode::KEY_INSERT),
+        "home" => Some(KeyCode::KEY_HOME),
+        "end" => Some(KeyCode::KEY_END),
+        "pageup" | "page_up" | "pgup" => Some(KeyCode::KEY_PAGEUP),
+        "pagedown" | "page_down" | "pgdn" => Some(KeyCode::KEY_PAGEDOWN),
 
-        "arrowup" | "up" => Some(Key::KEY_UP),
-        "arrowdown" | "down" => Some(Key::KEY_DOWN),
-        "arrowleft" | "left" => Some(Key::KEY_LEFT),
-        "arrowright" | "right" => Some(Key::KEY_RIGHT),
+        "arrowup" | "up" => Some(KeyCode::KEY_UP),
+        "arrowdown" | "down" => Some(KeyCode::KEY_DOWN),
+        "arrowleft" | "left" => Some(KeyCode::KEY_LEFT),
+        "arrowright" | "right" => Some(KeyCode::KEY_RIGHT),
 
-        "grave" | "`" => Some(Key::KEY_GRAVE),
-        "minus" | "-" => Some(Key::KEY_MINUS),
-        "equal" | "=" => Some(Key::KEY_EQUAL),
-        "leftbrace" | "[" => Some(Key::KEY_LEFTBRACE),
-        "rightbrace" | "]" => Some(Key::KEY_RIGHTBRACE),
-        "backslash" | "\\" => Some(Key::KEY_BACKSLASH),
-        "semicolon" | ";" => Some(Key::KEY_SEMICOLON),
-        "apostrophe" | "'" => Some(Key::KEY_APOSTROPHE),
-        "comma" | "," => Some(Key::KEY_COMMA),
-        "dot" | "." => Some(Key::KEY_DOT),
-        "slash" | "/" => Some(Key::KEY_SLASH),
+        "grave" | "`" => Some(KeyCode::KEY_GRAVE),
+        "minus" | "-" => Some(KeyCode::KEY_MINUS),
+        "equal" | "=" => Some(KeyCode::KEY_EQUAL),
+        "leftbrace" | "[" => Some(KeyCode::KEY_LEFTBRACE),
+        "rightbrace" | "]" => Some(KeyCode::KEY_RIGHTBRACE),
+        "backslash" | "\\" => Some(KeyCode::KEY_BACKSLASH),
+        "semicolon" | ";" => Some(KeyCode::KEY_SEMICOLON),
+        "apostrophe" | "'" => Some(KeyCode::KEY_APOSTROPHE),
+        "comma" | "," => Some(KeyCode::KEY_COMMA),
+        "dot" | "." => Some(KeyCode::KEY_DOT),
+        "slash" | "/" => Some(KeyCode::KEY_SLASH),
 
-        "kp0" => Some(Key::KEY_KP0),
-        "kp1" => Some(Key::KEY_KP1),
-        "kp2" => Some(Key::KEY_KP2),
-        "kp3" => Some(Key::KEY_KP3),
-        "kp4" => Some(Key::KEY_KP4),
-        "kp5" => Some(Key::KEY_KP5),
-        "kp6" => Some(Key::KEY_KP6),
-        "kp7" => Some(Key::KEY_KP7),
-        "kp8" => Some(Key::KEY_KP8),
-        "kp9" => Some(Key::KEY_KP9),
-        "kpenter" | "numpad_enter" => Some(Key::KEY_KPENTER),
-        "kpplus" | "kp+" | "numpad_+" => Some(Key::KEY_KPPLUS),
-        "kpminus" | "kp-" | "numpad_-" => Some(Key::KEY_KPMINUS),
-        "kpasterisk" | "kp*" | "numpad_*" => Some(Key::KEY_KPASTERISK),
-        "kpdot" | "kp." | "numpad_." => Some(Key::KEY_KPDOT),
-        "kpslash" | "kp/" | "numpad_/" => Some(Key::KEY_KPSLASH),
-        "numlock" | "num_lock" => Some(Key::KEY_NUMLOCK),
+        "kp0" => Some(KeyCode::KEY_KP0),
+        "kp1" => Some(KeyCode::KEY_KP1),
+        "kp2" => Some(KeyCode::KEY_KP2),
+        "kp3" => Some(KeyCode::KEY_KP3),
+        "kp4" => Some(KeyCode::KEY_KP4),
+        "kp5" => Some(KeyCode::KEY_KP5),
+        "kp6" => Some(KeyCode::KEY_KP6),
+        "kp7" => Some(KeyCode::KEY_KP7),
+        "kp8" => Some(KeyCode::KEY_KP8),
+        "kp9" => Some(KeyCode::KEY_KP9),
+        "kpenter" | "numpad_enter" => Some(KeyCode::KEY_KPENTER),
+        "kpplus" | "kp+" | "numpad_+" => Some(KeyCode::KEY_KPPLUS),
+        "kpminus" | "kp-" | "numpad_-" => Some(KeyCode::KEY_KPMINUS),
+        "kpasterisk" | "kp*" | "numpad_*" => Some(KeyCode::KEY_KPASTERISK),
+        "kpdot" | "kp." | "numpad_." => Some(KeyCode::KEY_KPDOT),
+        "kpslash" | "kp/" | "numpad_/" => Some(KeyCode::KEY_KPSLASH),
+        "numlock" | "num_lock" => Some(KeyCode::KEY_NUMLOCK),
 
-        "capslock" | "caps" => Some(Key::KEY_CAPSLOCK),
+        "capslock" | "caps" => Some(KeyCode::KEY_CAPSLOCK),
 
-        "ctrl" | "control" => Some(Key::KEY_LEFTCTRL),
-        "shift" => Some(Key::KEY_LEFTSHIFT),
-        "alt" => Some(Key::KEY_LEFTALT),
-        "win" | "meta" | "super" => Some(Key::KEY_LEFTMETA),
+        "ctrl" | "control" => Some(KeyCode::KEY_LEFTCTRL),
+        "shift" => Some(KeyCode::KEY_LEFTSHIFT),
+        "alt" => Some(KeyCode::KEY_LEFTALT),
+        "win" | "meta" | "super" => Some(KeyCode::KEY_LEFTMETA),
         _ => None,
     }
 }
 
 #[cfg(not(target_os = "linux"))]
-fn string_to_enigo_key(key_str: &str) -> Key {
+fn string_to_enigo_key(key_str: &str) -> KeyCode {
     match key_str.to_lowercase().as_str() {
-        "a" => Key::A,
-        "b" => Key::B,
-        "c" => Key::C,
-        "d" => Key::D,
-        "e" => Key::E,
-        "f" => Key::F,
-        "g" => Key::G,
-        "h" => Key::H,
-        "i" => Key::I,
-        "j" => Key::J,
-        "k" => Key::K,
-        "l" => Key::L,
-        "m" => Key::M,
-        "n" => Key::N,
-        "o" => Key::O,
-        "p" => Key::P,
-        "q" => Key::Q,
-        "r" => Key::R,
-        "s" => Key::S,
-        "t" => Key::T,
-        "u" => Key::U,
-        "v" => Key::V,
-        "w" => Key::W,
-        "x" => Key::X,
-        "y" => Key::Y,
-        "z" => Key::Z,
-        "0" => Key::Unicode('0'),
-        "1" => Key::Unicode('1'),
-        "2" => Key::Unicode('2'),
-        "3" => Key::Unicode('3'),
-        "4" => Key::Unicode('4'),
-        "5" => Key::Unicode('5'),
-        "6" => Key::Unicode('6'),
-        "7" => Key::Unicode('7'),
-        "8" => Key::Unicode('8'),
-        "9" => Key::Unicode('9'),
-        "f1" => Key::F1,
-        "f2" => Key::F2,
-        "f3" => Key::F3,
-        "f4" => Key::F4,
-        "f5" => Key::F5,
-        "f6" => Key::F6,
-        "f7" => Key::F7,
-        "f8" => Key::F8,
-        "f9" => Key::F9,
-        "f10" => Key::F10,
-        "f11" => Key::F11,
-        "f12" => Key::F12,
-        "escape" | "esc" => Key::Escape,
-        "space" => Key::Space,
-        "enter" | "return" => Key::Return,
-        "tab" => Key::Tab,
-        "backspace" | "back" => Key::Backspace,
-        "delete" | "del" => Key::Delete,
-        "insert" | "ins" => Key::Insert,
-        "home" => Key::Home,
-        "end" => Key::End,
-        "pageup" | "page_up" | "pgup" => Key::PageUp,
-        "pagedown" | "page_down" | "pgdn" => Key::PageDown,
-        "arrowup" | "up" => Key::UpArrow,
-        "arrowdown" | "down" => Key::DownArrow,
-        "arrowleft" | "left" => Key::LeftArrow,
-        "arrowright" | "right" => Key::RightArrow,
-        "capslock" | "caps" => Key::CapsLock,
-        "ctrl" | "control" => Key::Control,
-        "shift" => Key::Shift,
-        "alt" => Key::Alt,
-        "win" | "meta" | "super" => Key::Meta,
-        _ => Key::Unicode(key_str.chars().next().unwrap_or(' ')),
+        "a" => KeyCode::A,
+        "b" => KeyCode::B,
+        "c" => KeyCode::C,
+        "d" => KeyCode::D,
+        "e" => KeyCode::E,
+        "f" => KeyCode::F,
+        "g" => KeyCode::G,
+        "h" => KeyCode::H,
+        "i" => KeyCode::I,
+        "j" => KeyCode::J,
+        "k" => KeyCode::K,
+        "l" => KeyCode::L,
+        "m" => KeyCode::M,
+        "n" => KeyCode::N,
+        "o" => KeyCode::O,
+        "p" => KeyCode::P,
+        "q" => KeyCode::Q,
+        "r" => KeyCode::R,
+        "s" => KeyCode::S,
+        "t" => KeyCode::T,
+        "u" => KeyCode::U,
+        "v" => KeyCode::V,
+        "w" => KeyCode::W,
+        "x" => KeyCode::X,
+        "y" => KeyCode::Y,
+        "z" => KeyCode::Z,
+        "0" => KeyCode::Unicode('0'),
+        "1" => KeyCode::Unicode('1'),
+        "2" => KeyCode::Unicode('2'),
+        "3" => KeyCode::Unicode('3'),
+        "4" => KeyCode::Unicode('4'),
+        "5" => KeyCode::Unicode('5'),
+        "6" => KeyCode::Unicode('6'),
+        "7" => KeyCode::Unicode('7'),
+        "8" => KeyCode::Unicode('8'),
+        "9" => KeyCode::Unicode('9'),
+        "f1" => KeyCode::F1,
+        "f2" => KeyCode::F2,
+        "f3" => KeyCode::F3,
+        "f4" => KeyCode::F4,
+        "f5" => KeyCode::F5,
+        "f6" => KeyCode::F6,
+        "f7" => KeyCode::F7,
+        "f8" => KeyCode::F8,
+        "f9" => KeyCode::F9,
+        "f10" => KeyCode::F10,
+        "f11" => KeyCode::F11,
+        "f12" => KeyCode::F12,
+        "escape" | "esc" => KeyCode::Escape,
+        "space" => KeyCode::Space,
+        "enter" | "return" => KeyCode::Return,
+        "tab" => KeyCode::Tab,
+        "backspace" | "back" => KeyCode::Backspace,
+        "delete" | "del" => KeyCode::Delete,
+        "insert" | "ins" => KeyCode::Insert,
+        "home" => KeyCode::Home,
+        "end" => KeyCode::End,
+        "pageup" | "page_up" | "pgup" => KeyCode::PageUp,
+        "pagedown" | "page_down" | "pgdn" => KeyCode::PageDown,
+        "arrowup" | "up" => KeyCode::UpArrow,
+        "arrowdown" | "down" => KeyCode::DownArrow,
+        "arrowleft" | "left" => KeyCode::LeftArrow,
+        "arrowright" | "right" => KeyCode::RightArrow,
+        "capslock" | "caps" => KeyCode::CapsLock,
+        "ctrl" | "control" => KeyCode::Control,
+        "shift" => KeyCode::Shift,
+        "alt" => KeyCode::Alt,
+        "win" | "meta" | "super" => KeyCode::Meta,
+        _ => KeyCode::Unicode(key_str.chars().next().unwrap_or(' ')),
     }
 }
 
 #[cfg(not(target_os = "linux"))]
-fn modifier_to_enigo_keys(modifier: KeyboardModifier) -> Vec<Key> {
+fn modifier_to_enigo_keys(modifier: KeyboardModifier) -> Vec<KeyCode> {
     let mut keys = Vec::new();
 
     if modifier.has_ctrl() {
-        keys.push(Key::Control);
+        keys.push(KeyCode::Control);
     }
     if modifier.has_alt() {
-        keys.push(Key::Alt);
+        keys.push(KeyCode::Alt);
     }
     if modifier.has_shift() {
-        keys.push(Key::Shift);
+        keys.push(KeyCode::Shift);
     }
     if modifier.has_win() {
-        keys.push(Key::Meta);
+        keys.push(KeyCode::Meta);
     }
 
     keys
@@ -261,7 +261,7 @@ fn windows_letter_scan(key_str: &str) -> Option<u16> {
 }
 
 #[cfg(target_os = "windows")]
-fn enigo_press_key(enigo: &mut Enigo, key_str: &str, key: Key, direction: Direction) {
+fn enigo_press_key(enigo: &mut Enigo, key_str: &str, key: KeyCode, direction: Direction) {
     if let Some(scan) = windows_letter_scan(key_str) {
         let _ = enigo.raw(scan, direction);
     } else {
@@ -270,7 +270,7 @@ fn enigo_press_key(enigo: &mut Enigo, key_str: &str, key: Key, direction: Direct
 }
 
 #[cfg(all(not(target_os = "linux"), not(target_os = "windows")))]
-fn enigo_press_key(enigo: &mut Enigo, _key_str: &str, key: Key, direction: Direction) {
+fn enigo_press_key(enigo: &mut Enigo, _key_str: &str, key: KeyCode, direction: Direction) {
     let _ = enigo.key(key, direction);
 }
 
@@ -293,24 +293,24 @@ async fn perform_keyboard_press(device: &mut evdev::uinput::VirtualDevice, state
         ClickMode::Press => {
             for &mod_key in &modifier_keys {
                 let _ = device.emit(&[
-                    InputEvent::new(EventType::KEY, mod_key.0, 1),
-                    InputEvent::new(EventType::SYNCHRONIZATION, 0, 0),
+                    InputEvent::new(EventType::KEY.0, mod_key.0, 1),
+                    InputEvent::new(EventType::SYNCHRONIZATION.0, 0, 0),
                 ]);
             }
 
             if let Some(key) = key {
                 let _ = device.emit(&[
-                    InputEvent::new(EventType::KEY, key.0, 1),
-                    InputEvent::new(EventType::SYNCHRONIZATION, 0, 0),
-                    InputEvent::new(EventType::KEY, key.0, 0),
-                    InputEvent::new(EventType::SYNCHRONIZATION, 0, 0),
+                    InputEvent::new(EventType::KEY.0, key.0, 1),
+                    InputEvent::new(EventType::SYNCHRONIZATION.0, 0, 0),
+                    InputEvent::new(EventType::KEY.0, key.0, 0),
+                    InputEvent::new(EventType::SYNCHRONIZATION.0, 0, 0),
                 ]);
             }
 
             for &mod_key in modifier_keys.iter().rev() {
                 let _ = device.emit(&[
-                    InputEvent::new(EventType::KEY, mod_key.0, 0),
-                    InputEvent::new(EventType::SYNCHRONIZATION, 0, 0),
+                    InputEvent::new(EventType::KEY.0, mod_key.0, 0),
+                    InputEvent::new(EventType::SYNCHRONIZATION.0, 0, 0),
                 ]);
             }
         }
@@ -324,15 +324,15 @@ async fn perform_keyboard_press(device: &mut evdev::uinput::VirtualDevice, state
 
             for &mod_key in &modifier_keys {
                 let _ = device.emit(&[
-                    InputEvent::new(EventType::KEY, mod_key.0, 1),
-                    InputEvent::new(EventType::SYNCHRONIZATION, 0, 0),
+                    InputEvent::new(EventType::KEY.0, mod_key.0, 1),
+                    InputEvent::new(EventType::SYNCHRONIZATION.0, 0, 0),
                 ]);
             }
 
             if let Some(key) = key {
                 let _ = device.emit(&[
-                    InputEvent::new(EventType::KEY, key.0, 1),
-                    InputEvent::new(EventType::SYNCHRONIZATION, 0, 0),
+                    InputEvent::new(EventType::KEY.0, key.0, 1),
+                    InputEvent::new(EventType::SYNCHRONIZATION.0, 0, 0),
                 ]);
             }
 
@@ -340,15 +340,15 @@ async fn perform_keyboard_press(device: &mut evdev::uinput::VirtualDevice, state
 
             if let Some(key) = key {
                 let _ = device.emit(&[
-                    InputEvent::new(EventType::KEY, key.0, 0),
-                    InputEvent::new(EventType::SYNCHRONIZATION, 0, 0),
+                    InputEvent::new(EventType::KEY.0, key.0, 0),
+                    InputEvent::new(EventType::SYNCHRONIZATION.0, 0, 0),
                 ]);
             }
 
             for &mod_key in modifier_keys.iter().rev() {
                 let _ = device.emit(&[
-                    InputEvent::new(EventType::KEY, mod_key.0, 0),
-                    InputEvent::new(EventType::SYNCHRONIZATION, 0, 0),
+                    InputEvent::new(EventType::KEY.0, mod_key.0, 0),
+                    InputEvent::new(EventType::SYNCHRONIZATION.0, 0, 0),
                 ]);
             }
         }
@@ -618,7 +618,7 @@ mod tests {
     fn modifier_keys_use_runtime_order() {
         assert_eq!(
             modifier_to_enigo_keys(KeyboardModifier::CtrlShiftAltWin),
-            vec![Key::Control, Key::Alt, Key::Shift, Key::Meta]
+            vec![KeyCode::Control, KeyCode::Alt, KeyCode::Shift, KeyCode::Meta]
         );
     }
 

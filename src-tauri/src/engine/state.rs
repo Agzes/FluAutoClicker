@@ -8,7 +8,7 @@ use tokio::sync::Mutex;
 #[cfg(target_os = "linux")]
 use evdev::uinput::VirtualDevice;
 #[cfg(target_os = "linux")]
-use evdev::Key;
+use evdev::KeyCode;
 
 use super::macro_engine::state::MacroEngineState;
 
@@ -174,20 +174,20 @@ pub struct ToggleHotkeyPressState {
 
 impl KeyboardModifier {
     #[cfg(target_os = "linux")]
-    pub fn to_keys(self) -> Vec<Key> {
+    pub fn to_keys(self) -> Vec<KeyCode> {
         let mut keys = Vec::new();
 
         if self.has_ctrl() {
-            keys.push(Key::KEY_LEFTCTRL);
+            keys.push(KeyCode::KEY_LEFTCTRL);
         }
         if self.has_alt() {
-            keys.push(Key::KEY_LEFTALT);
+            keys.push(KeyCode::KEY_LEFTALT);
         }
         if self.has_shift() {
-            keys.push(Key::KEY_LEFTSHIFT);
+            keys.push(KeyCode::KEY_LEFTSHIFT);
         }
         if self.has_win() {
-            keys.push(Key::KEY_LEFTMETA);
+            keys.push(KeyCode::KEY_LEFTMETA);
         }
 
         keys

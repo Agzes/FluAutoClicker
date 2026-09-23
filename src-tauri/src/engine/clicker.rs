@@ -20,16 +20,16 @@ const INTRA_CLICK_GAP_MS: u64 = 25;
 use enigo::{Button, Coordinate, Direction};
 
 #[cfg(target_os = "linux")]
-use evdev::{EventType, InputEvent, Key};
+use evdev::{EventType, InputEvent, KeyCode};
 
 #[cfg(target_os = "linux")]
-fn mouse_button_to_key(btn: MouseButton) -> Key {
+fn mouse_button_to_key(btn: MouseButton) -> KeyCode {
     match btn {
-        MouseButton::Left => Key::BTN_LEFT,
-        MouseButton::Right => Key::BTN_RIGHT,
-        MouseButton::Middle => Key::BTN_MIDDLE,
-        MouseButton::Front => Key::BTN_SIDE,
-        MouseButton::Back => Key::BTN_EXTRA,
+        MouseButton::Left => KeyCode::BTN_LEFT,
+        MouseButton::Right => KeyCode::BTN_RIGHT,
+        MouseButton::Middle => KeyCode::BTN_MIDDLE,
+        MouseButton::Front => KeyCode::BTN_SIDE,
+        MouseButton::Back => KeyCode::BTN_EXTRA,
     }
 }
 
@@ -79,10 +79,10 @@ async fn perform_click(device: &mut evdev::uinput::VirtualDevice, state: &AppSta
                         .await;
                 }
                 let _ = device.emit(&[
-                    InputEvent::new(EventType::KEY, key.0, 1),
-                    InputEvent::new(EventType::SYNCHRONIZATION, 0, 0),
-                    InputEvent::new(EventType::KEY, key.0, 0),
-                    InputEvent::new(EventType::SYNCHRONIZATION, 0, 0),
+                    InputEvent::new(EventType::KEY.0, key.0, 1),
+                    InputEvent::new(EventType::SYNCHRONIZATION.0, 0, 0),
+                    InputEvent::new(EventType::KEY.0, key.0, 0),
+                    InputEvent::new(EventType::SYNCHRONIZATION.0, 0, 0),
                 ]);
             }
         }
@@ -95,15 +95,15 @@ async fn perform_click(device: &mut evdev::uinput::VirtualDevice, state: &AppSta
             };
 
             let _ = device.emit(&[
-                InputEvent::new(EventType::KEY, key.0, 1),
-                InputEvent::new(EventType::SYNCHRONIZATION, 0, 0),
+                InputEvent::new(EventType::KEY.0, key.0, 1),
+                InputEvent::new(EventType::SYNCHRONIZATION.0, 0, 0),
             ]);
 
             tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms as u64)).await;
 
             let _ = device.emit(&[
-                InputEvent::new(EventType::KEY, key.0, 0),
-                InputEvent::new(EventType::SYNCHRONIZATION, 0, 0),
+                InputEvent::new(EventType::KEY.0, key.0, 0),
+                InputEvent::new(EventType::SYNCHRONIZATION.0, 0, 0),
             ]);
         }
     }
@@ -149,9 +149,9 @@ async fn perform_click(enigo: &mut Enigo, state: &AppState) {
 #[cfg(target_os = "linux")]
 async fn move_to_position(device: &mut evdev::uinput::VirtualDevice, x: i32, y: i32) {
     let _ = device.emit(&[
-        InputEvent::new(EventType::ABSOLUTE, evdev::AbsoluteAxisType::ABS_X.0, x),
-        InputEvent::new(EventType::ABSOLUTE, evdev::AbsoluteAxisType::ABS_Y.0, y),
-        InputEvent::new(EventType::SYNCHRONIZATION, 0, 0),
+        InputEvent::new(EventType::ABSOLUTE.0, evdev::AbsoluteAxisCode::ABS_X.0, x),
+        InputEvent::new(EventType::ABSOLUTE.0, evdev::AbsoluteAxisCode::ABS_Y.0, y),
+        InputEvent::new(EventType::SYNCHRONIZATION.0, 0, 0),
     ]);
 }
 

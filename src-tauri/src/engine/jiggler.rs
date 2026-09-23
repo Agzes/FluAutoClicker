@@ -5,7 +5,7 @@ use std::sync::Arc;
 #[cfg(not(target_os = "linux"))]
 use enigo::{Coordinate, Enigo, Mouse, Settings};
 #[cfg(target_os = "linux")]
-use evdev::{EventType, InputEvent, RelativeAxisType};
+use evdev::{EventType, InputEvent, RelativeAxisCode};
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
 
@@ -74,9 +74,9 @@ async fn move_mouse(state: &AppState, dx: i32, dy: i32) {
 
     if let Some(ref mut device) = *device_guard {
         let _ = device.emit(&[
-            InputEvent::new(EventType::RELATIVE, RelativeAxisType::REL_X.0, dx),
-            InputEvent::new(EventType::RELATIVE, RelativeAxisType::REL_Y.0, dy),
-            InputEvent::new(EventType::SYNCHRONIZATION, 0, 0),
+            InputEvent::new(EventType::RELATIVE.0, RelativeAxisCode::REL_X.0, dx),
+            InputEvent::new(EventType::RELATIVE.0, RelativeAxisCode::REL_Y.0, dy),
+            InputEvent::new(EventType::SYNCHRONIZATION.0, 0, 0),
         ]);
     }
 }
