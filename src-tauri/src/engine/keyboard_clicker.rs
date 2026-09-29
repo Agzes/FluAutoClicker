@@ -618,7 +618,12 @@ mod tests {
     fn modifier_keys_use_runtime_order() {
         assert_eq!(
             modifier_to_enigo_keys(KeyboardModifier::CtrlShiftAltWin),
-            vec![KeyCode::Control, KeyCode::Alt, KeyCode::Shift, KeyCode::Meta]
+            vec![
+                KeyCode::Control,
+                KeyCode::Alt,
+                KeyCode::Shift,
+                KeyCode::Meta
+            ]
         );
     }
 

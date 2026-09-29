@@ -285,7 +285,11 @@ impl LinuxPlaybackBackend {
     fn scroll_mouse(&mut self, clicks: i32) -> Result<(), String> {
         self.mouse
             .emit(&[
-                InputEvent::new(EventType::RELATIVE.0, RelativeAxisCode::REL_WHEEL.0, -clicks),
+                InputEvent::new(
+                    EventType::RELATIVE.0,
+                    RelativeAxisCode::REL_WHEEL.0,
+                    -clicks,
+                ),
                 InputEvent::new(EventType::SYNCHRONIZATION.0, 0, 0),
             ])
             .map_err(|e| format!("Could not scroll mouse. Details: {e}"))
