@@ -1310,7 +1310,7 @@ dependencies = [
  "wayland-backend",
  "wayland-client",
  "wayland-scanner",
- "window-vibrancy 0.8.0",
+ "window-vibrancy 0.8.1",
  "winreg 0.56.0",
 ]
 
@@ -5652,9 +5652,9 @@ dependencies = [
 
 [[package]]
 name = "window-vibrancy"
-version = "0.8.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe6461139557c2245c3b9b34de2092e7af39460bf97ef4723bc5feb0cf66f831"
+checksum = "111e51caca442cafd9bab396628ac4d814880eaea4e63dfd76a12e9f342b5580"
 dependencies = [
  "objc2 0.6.4",
  "objc2-app-kit 0.3.2",
@@ -5662,7 +5662,7 @@ dependencies = [
  "objc2-foundation 0.3.2",
  "objc2-quartz-core 0.3.2",
  "raw-window-handle",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
  "windows-version",
 ]
 
