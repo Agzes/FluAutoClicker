@@ -171,6 +171,10 @@ pnpm run lint
 pnpm run test:rust
 ```
 
+## Roadmap
+
+See [docs/roadmap.md](docs/roadmap.md).
+
 ## Privacy
 
 FluAutoClicker has no telemetry and does not upload your settings, macros, or logs. See [PRIVACY.md](.github/PRIVACY.md) for the list of network endpoints.
