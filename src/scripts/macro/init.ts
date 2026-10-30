@@ -8,7 +8,7 @@ import { toBackendConfig } from "./backend";
 import { applyMouseButtonSupport, gatherConfig, generateConfigUi, setupConfigListeners } from "./config-ui";
 import { initRecordingSettingsUi, syncRecordingOptionsToUi, applyRecordAvailability, setMacroRecordingState } from "./recording";
 import { applyRepeatModeToUi, initRepeatSettingsListeners } from "./repeat";
-import { renderActions, loadActionsFromBackend, updateCurrentActionHighlight } from "./render";
+import { renderActions, loadActionsFromBackend, updateCurrentActionHighlight, initMacroEditorShortcuts } from "./render";
 import { macroState } from "./state";
 import type { MacroActionType, MacroCapabilities, MacroRecordingOptions, MacroRepeatState } from "./types";
 
@@ -406,6 +406,7 @@ export function initMacro() {
     });
 
     renderActions();
+    initMacroEditorShortcuts();
     initMacroEventListeners(recordButton);
 }
 
