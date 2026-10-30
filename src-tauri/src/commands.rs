@@ -24,8 +24,89 @@ fn fonts_dir() -> std::path::PathBuf {
         .join("fonts")
 }
 
+const MAX_FONT_FILE_SIZE_BYTES: u64 = 32 * 1024 * 1024;
+const ALLOWED_FONT_EXTENSIONS: [&str; 4] = ["ttf", "otf", "woff", "woff2"];
+
+fn font_extension(name: &str) -> String {
+    name.rsplit_once('.')
+        .map(|(_, ext)| ext.to_ascii_lowercase())
+        .unwrap_or_default()
+}
+
+fn validate_font_file_name(name: &str) -> Result<String, String> {
+    let name = name.trim();
+
+    if name.is_empty() {
+        return Err("Font file name is empty".to_string());
+    }
+    if name.len() > 255 {
+        return Err("Font file name is too long".to_string());
+    }
+    if name.starts_with('.') {
+        return Err("Font file name must not start with a dot".to_string());
+    }
+    if name
+        .chars()
+        .any(|c| matches!(c, '/' | '\\' | ':' | '<' | '>' | '"' | '|' | '?' | '*'))
+        || name.contains("..")
+    {
+        return Err("Font file name contains forbidden characters".to_string());
+    }
+    if name.chars().any(char::is_control) {
+        return Err("Font file name contains control characters".to_string());
+    }
+
+    let ext = font_extension(name);
+    if !ALLOWED_FONT_EXTENSIONS.contains(&ext.as_str()) {
+        return Err("Unsupported font format (expected .ttf, .otf, .woff or .woff2)".to_string());
+    }
+
+    Ok(name.to_string())
+}
+
+fn font_signature_matches(extension: &str, bytes: &[u8]) -> bool {
+    match extension {
+        "ttf" => {
+            bytes.starts_with(&[0x00, 0x01, 0x00, 0x00])
+                || bytes.starts_with(b"true")
+                || bytes.starts_with(b"ttcf")
+        }
+        "otf" => {
+            bytes.starts_with(b"OTTO")
+                || bytes.starts_with(&[0x00, 0x01, 0x00, 0x00])
+                || bytes.starts_with(b"true")
+                || bytes.starts_with(b"ttcf")
+        }
+        "woff" => bytes.starts_with(b"wOFF"),
+        "woff2" => bytes.starts_with(b"wOF2"),
+        _ => false,
+    }
+}
+
+fn validate_font_bytes(name: &str, bytes: &[u8]) -> Result<(), String> {
+    if bytes.len() as u64 > MAX_FONT_FILE_SIZE_BYTES {
+        return Err(format!(
+            "Font file is too large (limit is {} MB)",
+            MAX_FONT_FILE_SIZE_BYTES / (1024 * 1024)
+        ));
+    }
+    if !font_signature_matches(&font_extension(name), bytes) {
+        return Err("File content does not look like a font".to_string());
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn save_font_file(name: String, data: String) -> Result<String, String> {
+    let name = validate_font_file_name(&name)?;
+
+    if data.len() as u64 > MAX_FONT_FILE_SIZE_BYTES / 3 * 4 + 4 {
+        return Err(format!(
+            "Font file is too large (limit is {} MB)",
+            MAX_FONT_FILE_SIZE_BYTES / (1024 * 1024)
+        ));
+    }
+
     let dir = fonts_dir();
     tokio::fs::create_dir_all(&dir)
         .await
@@ -34,6 +115,7 @@ pub async fn save_font_file(name: String, data: String) -> Result<String, String
     let bytes = BASE64
         .decode(&data)
         .map_err(|e| format!("Invalid base64: {e}"))?;
+    validate_font_bytes(&name, &bytes)?;
 
     let path = dir.join(&name);
     tokio::fs::write(&path, &bytes)
@@ -45,10 +127,17 @@ pub async fn save_font_file(name: String, data: String) -> Result<String, String
 
 #[tauri::command]
 pub async fn load_font_file(name: String) -> Result<String, String> {
+    let name = validate_font_file_name(&name)?;
     let path = fonts_dir().join(&name);
     let bytes = tokio::fs::read(&path)
         .await
         .map_err(|e| format!("Failed to read font: {e}"))?;
+    if bytes.len() as u64 > MAX_FONT_FILE_SIZE_BYTES {
+        return Err(format!(
+            "Font file is too large (limit is {} MB)",
+            MAX_FONT_FILE_SIZE_BYTES / (1024 * 1024)
+        ));
+    }
     Ok(BASE64.encode(&bytes))
 }
 
@@ -60,6 +149,25 @@ pub async fn import_font_file(source: String) -> Result<(String, String), String
         .ok_or_else(|| "Invalid file path".to_string())?
         .to_string_lossy()
         .to_string();
+    let file_name = validate_font_file_name(&file_name)?;
+
+    let metadata = tokio::fs::metadata(&src)
+        .await
+        .map_err(|e| format!("Failed to read font metadata: {e}"))?;
+    if !metadata.is_file() {
+        return Err("Selected path is not a file".to_string());
+    }
+    if metadata.len() > MAX_FONT_FILE_SIZE_BYTES {
+        return Err(format!(
+            "Font file is too large (limit is {} MB)",
+            MAX_FONT_FILE_SIZE_BYTES / (1024 * 1024)
+        ));
+    }
+
+    let bytes = tokio::fs::read(&src)
+        .await
+        .map_err(|e| format!("Failed to read font: {e}"))?;
+    validate_font_bytes(&file_name, &bytes)?;
 
     let dir = fonts_dir();
     tokio::fs::create_dir_all(&dir)
@@ -67,13 +175,9 @@ pub async fn import_font_file(source: String) -> Result<(String, String), String
         .map_err(|e| format!("Failed to create fonts dir: {e}"))?;
 
     let dest = dir.join(&file_name);
-    tokio::fs::copy(&src, &dest)
+    tokio::fs::write(&dest, &bytes)
         .await
         .map_err(|e| format!("Failed to copy font: {e}"))?;
-
-    let bytes = tokio::fs::read(&dest)
-        .await
-        .map_err(|e| format!("Failed to read copied font: {e}"))?;
     let b64 = BASE64.encode(&bytes);
 
     Ok((file_name, b64))
@@ -2006,5 +2110,57 @@ mod tests {
                 ..
             }
         ));
+    }
+
+    #[test]
+    fn font_file_name_rejects_path_traversal_and_unknown_extensions() {
+        assert!(validate_font_file_name("MyFont.ttf").is_ok());
+        assert!(validate_font_file_name("  My Font-2.woff2  ").is_ok());
+
+        for name in [
+            "",
+            "   ",
+            "../secret.ttf",
+            "..\\secret.ttf",
+            "/etc/passwd",
+            "sub/dir/font.ttf",
+            "C:font.ttf",
+            ".hidden.ttf",
+            "font.exe",
+            "font",
+            "font.ttf.exe",
+        ] {
+            assert!(
+                validate_font_file_name(name).is_err(),
+                "expected {name:?} to be rejected"
+            );
+        }
+    }
+
+    #[test]
+    fn font_signature_check_matches_known_magic_bytes() {
+        assert!(font_signature_matches(
+            "ttf",
+            &[0x00, 0x01, 0x00, 0x00, 0x00]
+        ));
+        assert!(font_signature_matches("ttf", b"true"));
+        assert!(font_signature_matches("otf", b"OTTO"));
+        assert!(font_signature_matches("woff", b"wOFF"));
+        assert!(font_signature_matches("woff2", b"wOF2"));
+
+        assert!(!font_signature_matches("ttf", b"wOF2"));
+        assert!(!font_signature_matches("woff2", b"OTTO"));
+        assert!(!font_signature_matches("woff2", b"<html>"));
+    }
+
+    #[test]
+    fn font_bytes_validation_enforces_size_and_signature() {
+        let ok = validate_font_bytes("font.woff2", b"wOF2rest");
+        assert!(ok.is_ok());
+
+        let too_large = vec![0u8; MAX_FONT_FILE_SIZE_BYTES as usize + 1];
+        assert!(validate_font_bytes("font.woff2", &too_large).is_err());
+
+        assert!(validate_font_bytes("font.ttf", b"not a font").is_err());
     }
 }
