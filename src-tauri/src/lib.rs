@@ -806,7 +806,7 @@ pub fn run() {
                 } else {
                     LevelFilter::Info
                 })
-                .rotation_strategy(RotationStrategy::KeepAll)
+                .rotation_strategy(RotationStrategy::KeepSome(5))
                 .build(),
         )
         .plugin(tauri_plugin_opener::init())
