@@ -508,6 +508,47 @@ async fn prune_backup_group(dir: &std::path::Path, stem: &str) {
     }
 }
 
+static WRITE_SEQUENCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+pub(crate) async fn write_file_atomic(path: &std::path::Path, bytes: &[u8]) -> std::io::Result<()> {
+    let parent = path.parent().ok_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, "path has no parent")
+    })?;
+    let file_name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("config.json");
+    let sequence = WRITE_SEQUENCE.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let temp_path = parent.join(format!(
+        ".{file_name}.{}.{sequence}.tmp",
+        std::process::id()
+    ));
+
+    if let Err(error) = fs::write(&temp_path, bytes).await {
+        let _ = fs::remove_file(&temp_path).await;
+        return Err(error);
+    }
+
+    if let Err(error) = fs::rename(&temp_path, path).await {
+        #[cfg(target_os = "windows")]
+        {
+            if matches!(
+                error.kind(),
+                std::io::ErrorKind::AlreadyExists | std::io::ErrorKind::PermissionDenied
+            ) {
+                fs::remove_file(path).await.ok();
+                if fs::rename(&temp_path, path).await.is_ok() {
+                    return Ok(());
+                }
+            }
+        }
+        let _ = fs::remove_file(&temp_path).await;
+        return Err(error);
+    }
+
+    Ok(())
+}
+
 pub async fn save_config(config: &AppConfigFile) -> Result<(), String> {
     let path = app_config_path();
 
@@ -520,7 +561,7 @@ pub async fn save_config(config: &AppConfigFile) -> Result<(), String> {
     let raw = serde_json::to_string_pretty(&config.normalized_for_save())
         .map_err(|e| format!("Failed to serialize app config: {e}"))?;
 
-    fs::write(&path, raw)
+    write_file_atomic(&path, raw.as_bytes())
         .await
         .map_err(|e| format!("Failed to write app config: {e}"))
 }
@@ -571,7 +612,7 @@ pub async fn save_profile(
     let raw = serde_json::to_string_pretty(&profile)
         .map_err(|e| format!("Failed to serialize profile: {e}"))?;
 
-    fs::write(&path, raw)
+    write_file_atomic(&path, raw.as_bytes())
         .await
         .map_err(|e| format!("Failed to write profile: {e}"))
 }
@@ -736,6 +777,30 @@ mod tests {
         }
         paths.sort();
         paths
+    }
+
+    #[tokio::test]
+    async fn atomic_write_replaces_file_without_leftover_temp_files() {
+        let dir =
+            std::env::temp_dir().join(format!("fluac_atomic_write_test_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir).await;
+        fs::create_dir_all(&dir).await.unwrap();
+
+        let path = dir.join("app_config.json");
+        write_file_atomic(&path, b"{\"v\":1}").await.unwrap();
+        assert_eq!(fs::read(&path).await.unwrap(), b"{\"v\":1}".to_vec());
+
+        write_file_atomic(&path, b"{\"v\":2}").await.unwrap();
+        assert_eq!(fs::read(&path).await.unwrap(), b"{\"v\":2}".to_vec());
+
+        let mut names = Vec::new();
+        let mut entries = fs::read_dir(&dir).await.unwrap();
+        while let Some(entry) = entries.next_entry().await.unwrap() {
+            names.push(entry.file_name().to_string_lossy().to_string());
+        }
+        assert_eq!(names, vec!["app_config.json".to_string()]);
+
+        let _ = fs::remove_dir_all(&dir).await;
     }
 
     #[tokio::test]

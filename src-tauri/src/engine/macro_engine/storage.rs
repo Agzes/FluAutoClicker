@@ -35,7 +35,7 @@ pub async fn save_macro(
     let json = serde_json::to_string_pretty(&macro_file)
         .map_err(|e| format!("Failed to serialize macro: {}", e))?;
 
-    fs::write(&file_path, json)
+    crate::engine::config_store::write_file_atomic(&file_path, json.as_bytes())
         .await
         .map_err(|e| format!("Failed to write macro file: {}", e))?;
 
