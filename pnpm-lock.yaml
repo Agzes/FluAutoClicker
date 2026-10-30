@@ -40,7 +40,7 @@ importers:
         specifier: ~5.6.2
         version: 5.6.3
       typescript-eslint:
-        specifier: ^8.70.1
+        specifier: ^8.72.0
         version: 8.72.1(eslint@10.13.0(supports-color@10.2.2))(supports-color@10.2.2)(typescript@5.6.3)
       vite:
         specifier: ^8.3.5
