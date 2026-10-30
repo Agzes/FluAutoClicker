@@ -405,6 +405,8 @@ pub async fn keyboard_clicker_task(state: Arc<AppState>, app: AppHandle) {
                                 "keyboard-status-changed",
                                 serde_json::json!({ "running": false }),
                             );
+                            let _ = app
+                                .emit("keyboard-completed", serde_json::json!({ "unit": "times" }));
                             click_count = 0;
                             continue;
                         }
@@ -416,6 +418,10 @@ pub async fn keyboard_clicker_task(state: Arc<AppState>, app: AppHandle) {
                             let _ = app.emit(
                                 "keyboard-status-changed",
                                 serde_json::json!({ "running": false }),
+                            );
+                            let _ = app.emit(
+                                "keyboard-completed",
+                                serde_json::json!({ "unit": "seconds" }),
                             );
                             start_time = std::time::Instant::now();
                             continue;

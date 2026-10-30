@@ -1111,6 +1111,7 @@ async fn playback_loop(
     };
 
     let mut iteration = 0;
+    let mut had_error = false;
 
     loop {
         if cancel_flag.load(std::sync::atomic::Ordering::SeqCst) {
@@ -1162,6 +1163,7 @@ async fn playback_loop(
                     }),
                 );
                 cancel_flag.store(true, std::sync::atomic::Ordering::SeqCst);
+                had_error = true;
                 break;
             }
 
@@ -1200,6 +1202,9 @@ async fn playback_loop(
             "state": "stopped"
         }),
     );
+    if !had_error && !cancel_flag.load(std::sync::atomic::Ordering::SeqCst) {
+        let _ = app_handle.emit("macro-completed", serde_json::json!({}));
+    }
 }
 
 pub async fn stop_playback(state: &MacroEngineState, app_handle: tauri::AppHandle) {

@@ -249,6 +249,8 @@ pub async fn click_task(state: Arc<AppState>, app: AppHandle) {
                             ozone_target = None;
                             let _ =
                                 app.emit("status-changed", serde_json::json!({ "running": false }));
+                            let _ = app
+                                .emit("clicker-completed", serde_json::json!({ "unit": "times" }));
                             click_count = 0;
                             continue;
                         }
@@ -264,6 +266,10 @@ pub async fn click_task(state: Arc<AppState>, app: AppHandle) {
                             ozone_target = None;
                             let _ =
                                 app.emit("status-changed", serde_json::json!({ "running": false }));
+                            let _ = app.emit(
+                                "clicker-completed",
+                                serde_json::json!({ "unit": "seconds" }),
+                            );
                             start_time = std::time::Instant::now();
                             continue;
                         }

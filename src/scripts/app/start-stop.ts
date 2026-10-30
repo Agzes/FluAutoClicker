@@ -22,6 +22,10 @@ type OzoneWaitingPayload = {
     waiting?: boolean;
 };
 
+type CompletedPayload = {
+    unit?: string;
+};
+
 type SupportedTab = "mouse" | "keyboard" | "macro";
 
 type RuntimeStatusPayload = {
@@ -222,6 +226,20 @@ export function initStartStopControls() {
         if (event.payload?.waiting) {
             notify(t("ozone_notify"), "info", 3200);
         }
+    });
+
+    void listen<CompletedPayload>("clicker-completed", (event) => {
+        const unit = event.payload?.unit === "seconds" ? "seconds" : "times";
+        notify(t(`completed.mouse_${unit}`, "Mouse run finished"), "success", 2600);
+    });
+
+    void listen<CompletedPayload>("keyboard-completed", (event) => {
+        const unit = event.payload?.unit === "seconds" ? "seconds" : "times";
+        notify(t(`completed.keyboard_${unit}`, "Keyboard run finished"), "success", 2600);
+    });
+
+    void listen("macro-completed", () => {
+        notify(t("completed.macro", "Macro finished"), "success", 2600);
     });
 
     void syncRuntimeStatus();

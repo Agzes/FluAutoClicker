@@ -42,8 +42,6 @@ export function notify(
   timeoutMs = 3200,
   action?: ToastOptions
 ) {
-  if (action?.channel !== "updates") return;
-
   const container = ensureToastContainer();
 
   const item = document.createElement("div");
