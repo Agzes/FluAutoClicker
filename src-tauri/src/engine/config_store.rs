@@ -273,6 +273,13 @@ impl Default for AppConfigFile {
 
 impl AppConfigFile {
     pub fn migrate(mut self) -> Self {
+        let from_version = self.version;
+
+        if self.version < 2 {
+            self.migrate_v1_to_v2();
+            log::info!("Migrated app config from v{from_version} to v2");
+        }
+
         if self.version < CURRENT_CONFIG_VERSION {
             self.version = CURRENT_CONFIG_VERSION;
         }
@@ -330,6 +337,13 @@ impl AppConfigFile {
         }
 
         self
+    }
+
+    fn migrate_v1_to_v2(&mut self) {
+        if self.active_profile.trim().is_empty() {
+            self.active_profile = "default".to_string();
+        }
+        self.version = 2;
     }
 
     pub fn normalized_for_save(&self) -> Self {
@@ -437,6 +451,22 @@ pub async fn load_config() -> Result<AppConfigFile, String> {
     serde_json::from_str::<AppConfigFile>(&raw)
         .map(AppConfigFile::migrate)
         .map_err(|e| format!("Failed to parse app config: {e}"))
+}
+
+pub async fn load_config_or_default() -> AppConfigFile {
+    match load_config().await {
+        Ok(config) => config,
+        Err(error) => {
+            static REPORTED: std::sync::atomic::AtomicBool =
+                std::sync::atomic::AtomicBool::new(false);
+            if !REPORTED.swap(true, std::sync::atomic::Ordering::SeqCst) {
+                log::error!("Failed to load app config, using defaults: {error}");
+            } else {
+                log::warn!("Failed to load app config, using defaults: {error}");
+            }
+            AppConfigFile::default()
+        }
+    }
 }
 
 async fn backup_config_if_needed(raw: &str) {
@@ -786,6 +816,26 @@ mod tests {
         assert_eq!(migrated.mouse.cps, 24);
         assert_eq!(migrated.keyboard.key, "z");
         assert!(migrated.frontend_state.is_object());
+    }
+
+    #[test]
+    fn v1_config_migration_applies_step_defaults() {
+        let migrated = AppConfigFile {
+            version: 1,
+            active_profile: "   ".to_string(),
+            macro_settings: MacroSettings {
+                repeat_count: 0,
+                repeat_duration_ms: 0,
+                ..MacroSettings::default()
+            },
+            ..AppConfigFile::default()
+        }
+        .migrate();
+
+        assert_eq!(migrated.version, CURRENT_CONFIG_VERSION);
+        assert_eq!(migrated.active_profile, "default");
+        assert_eq!(migrated.macro_settings.repeat_count, 1);
+        assert_eq!(migrated.macro_settings.repeat_duration_ms, 1_000);
     }
 
     #[test]

@@ -89,12 +89,15 @@ impl MacroFile {
         if self.version >= Self::CURRENT_VERSION {
             return self;
         }
+
+        let from_version = self.version;
         if self.version == 1 {
             for action in &mut self.actions {
                 action.timestamp_ms = 0;
             }
-            self.version = Self::CURRENT_VERSION;
         }
+        self.version = Self::CURRENT_VERSION;
+        log::info!("Migrated macro from v{from_version} to v{}", self.version);
         self
     }
 }

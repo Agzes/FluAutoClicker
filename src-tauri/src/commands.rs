@@ -383,9 +383,7 @@ pub async fn save_export_file(path: String, contents: String) -> Result<(), Stri
 
 #[tauri::command]
 pub async fn list_profiles_cmd() -> Result<Vec<String>, String> {
-    let config = crate::engine::config_store::load_config()
-        .await
-        .unwrap_or_default();
+    let config = crate::engine::config_store::load_config_or_default().await;
     crate::engine::config_store::ensure_default_profile(&config).await?;
     let mut profiles = crate::engine::config_store::list_profiles().await?;
     if !profiles.iter().any(|name| name == "default") {
@@ -464,9 +462,7 @@ pub async fn import_profile_cmd(
 
 #[tauri::command]
 pub async fn export_backup_cmd() -> Result<crate::engine::config_store::BackupFile, String> {
-    let app_config = crate::engine::config_store::load_config()
-        .await
-        .unwrap_or_default();
+    let app_config = crate::engine::config_store::load_config_or_default().await;
 
     let profile_names = crate::engine::config_store::list_profiles()
         .await
@@ -557,9 +553,7 @@ pub async fn rename_profile_cmd(
 
     crate::engine::config_store::rename_profile(&old_name, &new_name).await?;
 
-    let mut config = crate::engine::config_store::load_config()
-        .await
-        .unwrap_or_default();
+    let mut config = crate::engine::config_store::load_config_or_default().await;
     if config.active_profile == old_name {
         config.active_profile = new_name.clone();
         crate::persist_and_apply_config(&app, state.inner(), config).await?;
@@ -586,17 +580,14 @@ pub async fn delete_profile_cmd(
 
     crate::engine::config_store::delete_profile(&normalized_name).await?;
 
-    let config = crate::engine::config_store::load_config()
-        .await
-        .unwrap_or_default();
+    let config = crate::engine::config_store::load_config_or_default().await;
     if config.active_profile == normalized_name {
         crate::load_and_activate_profile(&app, state.inner(), "default").await?;
     }
 
     let updated = list_profiles_cmd().await?;
-    let active_profile = crate::engine::config_store::load_config()
+    let active_profile = crate::engine::config_store::load_config_or_default()
         .await
-        .unwrap_or_default()
         .active_profile;
     let _ = app.emit(
         "profiles-updated",
@@ -1185,9 +1176,7 @@ pub async fn set_hotkey(
         return Err(register_error);
     }
 
-    let mut config = crate::engine::config_store::load_config()
-        .await
-        .unwrap_or_default();
+    let mut config = crate::engine::config_store::load_config_or_default().await;
     config.hotkeys.toggle_start_stop = next_hotkeys.toggle_start_stop.clone();
     config.hotkeys.pick_position = next_hotkeys.pick_position.clone();
     config.hotkeys.toggle_macro_recording = next_hotkeys.toggle_macro_recording.clone();
