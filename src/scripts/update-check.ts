@@ -1,7 +1,7 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { emitSettingsChanged } from "./settings-persistence";
-import { t } from "./i18n";
+import { t, getLanguage } from "./i18n";
 
 const UPDATE_FEED_URL =
     "https://raw.githubusercontent.com/Agzes/FluAutoClicker/next/docs/updates/latest-beta.json";
@@ -155,7 +155,17 @@ function formatPublishedDate(value?: string): string {
         return t("updates.published_prefix", "Published: {date}", { date: value });
     }
 
-    return t("updates.published_prefix", "Published: {date}", { date: parsed.toLocaleString() });
+    let formatted: string;
+    try {
+        formatted = new Intl.DateTimeFormat(getLanguage(), {
+            dateStyle: "medium",
+            timeStyle: "short",
+        }).format(parsed);
+    } catch {
+        formatted = parsed.toLocaleString();
+    }
+
+    return t("updates.published_prefix", "Published: {date}", { date: formatted });
 }
 
 function updateLatestBuildDetails(manifest?: UpdateManifest | null) {
