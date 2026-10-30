@@ -1547,6 +1547,12 @@ pub async fn add_macro_action(
     };
 
     let mut actions = state.macro_engine.actions.lock().await;
+    if actions.len() >= crate::engine::macro_engine::state::MAX_MACRO_ACTIONS {
+        return Err(format!(
+            "Macro cannot contain more than {} actions.",
+            crate::engine::macro_engine::state::MAX_MACRO_ACTIONS
+        ));
+    }
     actions.push(action);
 
     drop(actions);
@@ -1614,6 +1620,12 @@ pub async fn duplicate_macro_action(
     action_id: u64,
 ) -> Result<(), String> {
     let mut actions = state.macro_engine.actions.lock().await;
+    if actions.len() >= crate::engine::macro_engine::state::MAX_MACRO_ACTIONS {
+        return Err(format!(
+            "Macro cannot contain more than {} actions.",
+            crate::engine::macro_engine::state::MAX_MACRO_ACTIONS
+        ));
+    }
     let Some(index) = actions.iter().position(|action| action.id == action_id) else {
         return Err("Macro action was not found.".to_string());
     };

@@ -6,6 +6,8 @@ use tokio::sync::Mutex;
 use super::recording::MacroRecordingContext;
 use super::types::{MacroAction, MacroPlayerState, MacroRecordingOptions, MacroRepeatMode};
 
+pub const MAX_MACRO_ACTIONS: usize = 10_000;
+
 #[derive(Clone)]
 
 pub struct MacroEngineState {
@@ -76,6 +78,14 @@ impl MacroFile {
     }
 
     pub fn migrate(mut self) -> Self {
+        if self.actions.len() > MAX_MACRO_ACTIONS {
+            log::warn!(
+                "Truncating macro from {} to {} actions",
+                self.actions.len(),
+                MAX_MACRO_ACTIONS
+            );
+            self.actions.truncate(MAX_MACRO_ACTIONS);
+        }
         if self.version >= Self::CURRENT_VERSION {
             return self;
         }
@@ -86,5 +96,32 @@ impl MacroFile {
             self.version = Self::CURRENT_VERSION;
         }
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::engine::macro_engine::types::MacroActionConfig;
+
+    #[test]
+    fn macro_migration_truncates_oversized_action_lists() {
+        let actions = (0..(MAX_MACRO_ACTIONS + 5))
+            .map(|id| MacroAction {
+                id: id as u64,
+                timestamp_ms: 0,
+                config: MacroActionConfig::Sleep { duration_ms: 1 },
+            })
+            .collect();
+
+        let migrated = MacroFile {
+            version: MacroFile::CURRENT_VERSION,
+            repeat_mode: MacroRepeatMode::default(),
+            recording_options: MacroRecordingOptions::default(),
+            actions,
+        }
+        .migrate();
+
+        assert_eq!(migrated.actions.len(), MAX_MACRO_ACTIONS);
     }
 }

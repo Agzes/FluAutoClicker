@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
 
+use super::macro_engine::state::MAX_MACRO_ACTIONS;
 use super::macro_engine::types::{MacroAction, MacroRecordingOptions, MacroRepeatMode};
 
 pub const CURRENT_CONFIG_VERSION: u32 = 2;
@@ -319,6 +320,14 @@ impl AppConfigFile {
             .macro_settings
             .repeat_duration_ms
             .clamp(MIN_MACRO_REPEAT_DURATION_MS, MAX_MACRO_REPEAT_DURATION_MS);
+        if self.macro_settings.actions.len() > MAX_MACRO_ACTIONS {
+            log::warn!(
+                "Truncating macro from {} to {} actions",
+                self.macro_settings.actions.len(),
+                MAX_MACRO_ACTIONS
+            );
+            self.macro_settings.actions.truncate(MAX_MACRO_ACTIONS);
+        }
 
         self
     }
@@ -353,14 +362,28 @@ impl ProfileFile {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BackupFile {
     pub version: u32,
+    #[serde(default)]
+    pub app_version: String,
+    #[serde(default)]
+    pub os: String,
+    #[serde(default)]
+    pub created_at_unix_ms: u64,
     pub app_config: AppConfigFile,
     pub profiles: Vec<ProfileFile>,
 }
 
 impl BackupFile {
     pub fn new(app_config: AppConfigFile, profiles: Vec<ProfileFile>) -> Self {
+        let created_at_unix_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|duration| duration.as_millis() as u64)
+            .unwrap_or(0);
+
         Self {
             version: 1,
+            app_version: env!("CARGO_PKG_VERSION").to_string(),
+            os: std::env::consts::OS.to_string(),
+            created_at_unix_ms,
             app_config,
             profiles,
         }
@@ -437,6 +460,8 @@ pub(crate) async fn backup_raw_config_file(stem: &str, bytes: &[u8]) -> Option<P
 }
 
 const MAX_AUTO_BACKUPS_PER_GROUP: usize = 10;
+const MAX_TOTAL_AUTO_BACKUPS: usize = 200;
+const MAX_TOTAL_BACKUP_BYTES: u64 = 64 * 1024 * 1024;
 
 static BACKUP_SEQUENCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
@@ -457,6 +482,7 @@ async fn backup_bytes_into(dir: &std::path::Path, stem: &str, bytes: &[u8]) -> O
     let path = dir.join(format!("{stem}_{stamp}_{seq:06}.json"));
     fs::write(&path, bytes).await.ok()?;
     prune_backup_group(dir, stem).await;
+    prune_backups_dir(dir).await;
     Some(path)
 }
 
@@ -505,6 +531,44 @@ async fn prune_backup_group(dir: &std::path::Path, stem: &str) {
     let excess = group.len() - MAX_AUTO_BACKUPS_PER_GROUP;
     for path in group.into_iter().take(excess) {
         let _ = fs::remove_file(path).await;
+    }
+}
+
+async fn prune_backups_dir(dir: &std::path::Path) {
+    let Ok(mut entries) = fs::read_dir(dir).await else {
+        return;
+    };
+
+    let mut files = Vec::new();
+    while let Ok(Some(entry)) = entries.next_entry().await {
+        let path = entry.path();
+        if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+            continue;
+        }
+        let Ok(metadata) = entry.metadata().await else {
+            continue;
+        };
+        let modified = metadata
+            .modified()
+            .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+        files.push((path, metadata.len(), modified));
+    }
+
+    let mut total_bytes: u64 = files.iter().map(|(_, size, _)| size).sum();
+    files.sort_by_key(|entry| entry.2);
+
+    let mut remaining = files.len();
+    for (path, size, _) in files {
+        if remaining <= MAX_TOTAL_AUTO_BACKUPS && total_bytes <= MAX_TOTAL_BACKUP_BYTES {
+            break;
+        }
+        if remaining <= 1 {
+            break;
+        }
+        if fs::remove_file(&path).await.is_ok() {
+            remaining -= 1;
+            total_bytes = total_bytes.saturating_sub(size);
+        }
     }
 }
 
@@ -801,6 +865,44 @@ mod tests {
         assert_eq!(names, vec!["app_config.json".to_string()]);
 
         let _ = fs::remove_dir_all(&dir).await;
+    }
+
+    #[tokio::test]
+    async fn total_backup_retention_prunes_beyond_global_limit() {
+        let dir =
+            std::env::temp_dir().join(format!("fluac_backup_test_total_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir).await;
+        fs::create_dir_all(&dir).await.unwrap();
+
+        for i in 0..(MAX_TOTAL_AUTO_BACKUPS + 5) {
+            let path = dir.join(format!("macro_v1_0000000000000_{i:06}.json"));
+            fs::write(&path, format!("{{\"i\":{i}}}")).await.unwrap();
+        }
+        fs::write(dir.join("notes.txt"), b"keep me").await.unwrap();
+
+        prune_backups_dir(&dir).await;
+
+        let mut json_files = 0;
+        let mut entries = fs::read_dir(&dir).await.unwrap();
+        while let Some(entry) = entries.next_entry().await.unwrap() {
+            if entry.path().extension().and_then(|ext| ext.to_str()) == Some("json") {
+                json_files += 1;
+            }
+        }
+
+        assert_eq!(json_files, MAX_TOTAL_AUTO_BACKUPS);
+        assert!(dir.join("notes.txt").exists());
+
+        let _ = fs::remove_dir_all(&dir).await;
+    }
+
+    #[test]
+    fn backup_metadata_is_filled_on_export() {
+        let backup = BackupFile::new(AppConfigFile::default(), Vec::new());
+
+        assert!(!backup.app_version.is_empty());
+        assert!(!backup.os.is_empty());
+        assert!(backup.created_at_unix_ms > 0);
     }
 
     #[tokio::test]

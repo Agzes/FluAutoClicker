@@ -1010,6 +1010,22 @@ pub async fn start_playback(
         return Err("Add at least one macro action before starting playback.".to_string());
     }
 
+    if actions.len() > super::state::MAX_MACRO_ACTIONS {
+        let error = format!(
+            "Macro is too long: {} actions, the limit is {}.",
+            actions.len(),
+            super::state::MAX_MACRO_ACTIONS
+        );
+        let _ = app_handle.emit(
+            "macro-status-changed",
+            serde_json::json!({
+                "state": "stopped",
+                "error": error
+            }),
+        );
+        return Err(error);
+    }
+
     let mut player_state_guard = state.player_state.lock().await;
     if *player_state_guard == MacroPlayerState::Playing {
         return Ok(());
