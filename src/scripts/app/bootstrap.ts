@@ -18,6 +18,7 @@ import { initCpsTestWindow, initDrawerLaunchers } from "./quick-actions";
 import { initStartStopControls } from "./start-stop";
 import { initTabAndToggleUi } from "./toggle-groups";
 import { initWindowControls } from "./window-controls";
+import { initWindowGeometry } from "../window-geometry";
 import { initKeyboardPartyMode } from "./easter-egg";
 import { initNativeShellGuards } from "./native-shell-guards";
 import { initLocalShortcuts } from "./local-shortcuts";
@@ -30,6 +31,7 @@ export async function bootstrapApp() {
 
     await loadPersistedSettings();
     await initWindowEffects();
+    await initWindowGeometry();
 
     initI18n();
     initLanguagePicker();

@@ -1,11 +1,9 @@
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { appWindow } from "./app-window";
 import { createSlideIndicator, updateIndicator } from "./utils";
 import { initWebviewErrorModal } from "./webview-error-modal";
 import { initWindowEffects } from "./window-effects";
 import { applyWindowControlIcons, WINDOW_CONTROL_ICONS_STORAGE_KEY } from "./window-control-icons";
 import { t, initI18n } from "./i18n";
-
-const appWindow = getCurrentWindow();
 
 window.addEventListener("DOMContentLoaded", async () => {
     initI18n();

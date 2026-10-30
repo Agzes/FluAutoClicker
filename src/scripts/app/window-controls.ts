@@ -1,8 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { appWindow } from "../app-window";
 import { applyWindowControlIcons, WINDOW_CONTROL_ICONS_CHANGED_EVENT } from "../window-control-icons";
-
-const appWindow = getCurrentWindow();
 export const ALWAYS_ON_TOP_STORAGE_KEY = "flu-always-on-top";
 export const ALWAYS_ON_TOP_CHANGED_EVENT = "flu:always-on-top-changed";
 

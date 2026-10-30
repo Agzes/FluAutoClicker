@@ -1,10 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { appWindow } from "./app-window";
 
 const ACRYLIC_STORAGE_KEY = "flu-window-acrylic";
 let acrylicEnabledState = false;
 let acrylicNativeReady = false;
-const currentWindow = getCurrentWindow();
+const currentWindow = appWindow;
 
 export function isAcrylicPreferred() {
     return localStorage.getItem(ACRYLIC_STORAGE_KEY) === "true";
