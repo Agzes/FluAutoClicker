@@ -171,6 +171,10 @@ pnpm run lint
 pnpm run test:rust
 ```
 
+## Privacy
+
+FluAutoClicker has no telemetry and does not upload your settings, macros, or logs. See [PRIVACY.md](.github/PRIVACY.md) for the list of network endpoints.
+
 ## Responsible Use
 
 Automation tools can violate the rules of games, websites, workplaces, or online services. Use FluAutoClicker only where automation is allowed, and do not use it to abuse systems, bypass fair-play rules, or perform unwanted actions on someone else's device.
