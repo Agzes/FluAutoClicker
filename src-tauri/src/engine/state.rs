@@ -285,28 +285,6 @@ impl KeyboardModifier {
             (true, true, true, true) => KeyboardModifier::CtrlShiftAltWin,
         }
     }
-
-    #[allow(dead_code)]
-    pub fn to_display_string(self) -> String {
-        match self {
-            KeyboardModifier::None => "".to_string(),
-            KeyboardModifier::Ctrl => "Ctrl".to_string(),
-            KeyboardModifier::Shift => "Shift".to_string(),
-            KeyboardModifier::Alt => "Alt".to_string(),
-            KeyboardModifier::Win => "Win".to_string(),
-            KeyboardModifier::CtrlShift => "Ctrl+Shift".to_string(),
-            KeyboardModifier::CtrlAlt => "Ctrl+Alt".to_string(),
-            KeyboardModifier::CtrlWin => "Ctrl+Win".to_string(),
-            KeyboardModifier::ShiftAlt => "Shift+Alt".to_string(),
-            KeyboardModifier::ShiftWin => "Shift+Win".to_string(),
-            KeyboardModifier::AltWin => "Alt+Win".to_string(),
-            KeyboardModifier::CtrlShiftAlt => "Ctrl+Shift+Alt".to_string(),
-            KeyboardModifier::CtrlShiftWin => "Ctrl+Shift+Win".to_string(),
-            KeyboardModifier::CtrlAltWin => "Ctrl+Alt+Win".to_string(),
-            KeyboardModifier::ShiftAltWin => "Shift+Alt+Win".to_string(),
-            KeyboardModifier::CtrlShiftAltWin => "Ctrl+Shift+Alt+Win".to_string(),
-        }
-    }
 }
 
 pub struct AppState {
@@ -316,6 +294,7 @@ pub struct AppState {
     pub is_jiggler_active: AtomicBool,
     pub minimize_to_tray: AtomicBool,
     pub is_quitting: AtomicBool,
+    pub startup_enabled: StdMutex<Option<bool>>,
     pub stop_on_custom_position_move: AtomicBool,
     pub acrylic_enabled: AtomicBool,
     pub cps: AtomicU32,
@@ -375,6 +354,7 @@ impl Default for AppState {
             is_jiggler_active: AtomicBool::new(false),
             minimize_to_tray: AtomicBool::new(true),
             is_quitting: AtomicBool::new(false),
+            startup_enabled: StdMutex::new(None),
             stop_on_custom_position_move: AtomicBool::new(true),
             acrylic_enabled: AtomicBool::new(false),
             cps: AtomicU32::new(10),

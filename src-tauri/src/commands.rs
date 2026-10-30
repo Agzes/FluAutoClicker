@@ -328,7 +328,7 @@ pub async fn save_app_config(
         config.general.autostart = false;
     }
 
-    set_system_startup_impl(&app, config.general.autostart)?;
+    sync_system_startup(&app, state.inner(), config.general.autostart)?;
     state
         .minimize_to_tray
         .store(config.general.minimize_to_tray, Ordering::SeqCst);
@@ -364,7 +364,7 @@ pub async fn import_app_config(
         config.general.autostart = false;
     }
 
-    set_system_startup_impl(&app, config.general.autostart)?;
+    sync_system_startup(&app, state.inner(), config.general.autostart)?;
     let normalized = config.normalized_for_save();
     crate::persist_and_apply_config(&app, state.inner(), normalized.clone()).await?;
     let _ = app.emit(
@@ -521,7 +521,7 @@ pub async fn import_backup_cmd(
         config.general.autostart = false;
     }
 
-    set_system_startup_impl(&app, config.general.autostart)?;
+    sync_system_startup(&app, state.inner(), config.general.autostart)?;
     let normalized = config.normalized_for_save();
     crate::persist_and_apply_config(&app, state.inner(), normalized.clone()).await?;
     let _ = app.emit(
@@ -776,17 +776,47 @@ pub fn quit_app(state: State<'_, Arc<AppState>>, app: AppHandle) {
 }
 
 #[tauri::command]
-pub fn set_start_on_system_startup(app: AppHandle, enabled: bool) -> Result<(), String> {
+pub fn set_start_on_system_startup(
+    state: State<'_, Arc<AppState>>,
+    app: AppHandle,
+    enabled: bool,
+) -> Result<(), String> {
     if enabled && !crate::system_startup_supported() {
         return Err("Start on system startup is not supported on this desktop.".to_string());
     }
 
-    set_system_startup_impl(&app, enabled)
+    sync_system_startup(&app, state.inner(), enabled)
 }
 
 #[tauri::command]
-pub fn get_start_on_system_startup(app: AppHandle) -> Result<bool, String> {
-    get_system_startup_impl(&app)
+pub fn get_start_on_system_startup(
+    state: State<'_, Arc<AppState>>,
+    app: AppHandle,
+) -> Result<bool, String> {
+    let enabled = get_system_startup_impl(&app)?;
+    *state
+        .startup_enabled
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(enabled);
+    Ok(enabled)
+}
+
+fn sync_system_startup(
+    app: &AppHandle,
+    state: &Arc<AppState>,
+    enabled: bool,
+) -> Result<(), String> {
+    let mut cached = state
+        .startup_enabled
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    if *cached == Some(enabled) {
+        return Ok(());
+    }
+
+    set_system_startup_impl(app, enabled)?;
+    *cached = Some(enabled);
+    Ok(())
 }
 
 #[cfg(target_os = "windows")]
