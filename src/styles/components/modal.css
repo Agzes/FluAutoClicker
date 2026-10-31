@@ -530,17 +530,27 @@
 }
 
 #toast-container {
-    position: absolute;
-    inset: 6px;
-    z-index: 20;
-    width: auto;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
     align-items: stretch;
     gap: 4px;
+    height: 0;
+    padding: 0 6px;
     overflow: hidden;
+    opacity: 0;
     pointer-events: none;
+    flex-shrink: 0;
+    transition:
+        height 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+        padding-top 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+        opacity 0.16s ease;
+}
+
+#toast-container:has(.toast-item) {
+    height: 38px;
+    padding-top: 7px;
+    opacity: 1;
 }
 
 .toast-item {

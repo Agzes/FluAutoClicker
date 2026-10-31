@@ -11,10 +11,10 @@ export type ToastOptions = ToastAction & {
 };
 
 function toastIcon(kind: ToastKind): string {
-  if (kind === "success") return "&#58544;";
-  if (kind === "warning") return "&#58485;";
-  if (kind === "error") return "&#57676;";
-  return "&#58437;";
+  if (kind === "success") return "&#57894;";
+  if (kind === "warning") return "&#57747;";
+  if (kind === "error") return "&#57463;";
+  return "&#57593;";
 }
 
 function toastColor(kind: ToastKind): string {
@@ -42,16 +42,40 @@ export function notify(
   timeoutMs = 3200,
   action?: ToastOptions
 ) {
+  toastQueue.push({ message, kind, timeoutMs, action });
+  showNextToast();
+}
+
+type ToastEntry = {
+  message: string;
+  kind: ToastKind;
+  timeoutMs: number;
+  action?: ToastOptions;
+};
+
+const toastQueue: ToastEntry[] = [];
+let toastActive = false;
+
+function showNextToast() {
+  if (toastActive) return;
+
+  const entry = toastQueue.shift();
+  if (!entry) {
+    toastActive = false;
+    return;
+  }
+
+  toastActive = true;
   const container = ensureToastContainer();
 
   const item = document.createElement("div");
   item.className = "toast-item";
-  item.dataset.toastKind = kind;
-  item.style.setProperty("--toast-color", toastColor(kind));
+  item.dataset.toastKind = entry.kind;
+  item.style.setProperty("--toast-color", toastColor(entry.kind));
 
   const icon = document.createElement("span");
   icon.className = "icon toast-icon";
-  icon.innerHTML = action?.icon || toastIcon(kind);
+  icon.innerHTML = entry.action?.icon || toastIcon(entry.kind);
   item.appendChild(icon);
 
   const body = document.createElement("div");
@@ -60,28 +84,39 @@ export function notify(
   const copy = document.createElement("div");
   copy.className = "toast-copy";
 
-  if (action?.title) {
+  if (entry.action?.title) {
     const title = document.createElement("span");
     title.className = "toast-title";
-    title.textContent = action.title;
+    title.textContent = entry.action.title;
     copy.appendChild(title);
   }
 
   const text = document.createElement("p");
   text.className = "toast-message";
-  text.textContent = message;
+  text.textContent = entry.message;
   copy.appendChild(text);
   body.appendChild(copy);
 
-  if (action) {
+  let finished = false;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    window.clearTimeout(timer);
+    item.dataset.visible = "false";
+    window.setTimeout(() => {
+      item.remove();
+      toastActive = false;
+      showNextToast();
+    }, 220);
+  };
+
+  if (entry.action) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "toast-action";
-    button.textContent = action.label;
+    button.textContent = entry.action.label;
     button.addEventListener("click", () => {
-      void Promise.resolve(action.onClick()).finally(() => {
-        item.remove();
-      });
+      void Promise.resolve(entry.action!.onClick()).finally(finish);
     });
     body.appendChild(button);
   }
@@ -92,8 +127,5 @@ export function notify(
     item.dataset.visible = "true";
   });
 
-  window.setTimeout(() => {
-    item.dataset.visible = "false";
-    window.setTimeout(() => item.remove(), 220);
-  }, timeoutMs);
+  const timer = window.setTimeout(finish, entry.timeoutMs);
 }
