@@ -269,12 +269,17 @@
 }
 
 .macro-action-item.selected {
-    background: color-mix(in srgb, var(--accent) 12%, var(--control-bg));
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent);
+    background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
 .macro-action-item.selected:hover {
-    background: color-mix(in srgb, var(--accent) 16%, var(--control-bg));
+    background: color-mix(in srgb, var(--accent) 11%, var(--surface));
+}
+
+.macro-action-item.selected.playing {
+    background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+    box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .macro-action-item.playing {
