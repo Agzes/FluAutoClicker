@@ -362,8 +362,18 @@ function moveSelectedAction(delta: number) {
 }
 
 export function initMacroEditorShortcuts() {
-    document.addEventListener("keydown", (event) => {
-        if (selectedActionId === null || event.defaultPrevented) {
+    document.addEventListener("click", (event) => {
+        const target = event.target as HTMLElement | null;
+        if (target?.closest(".macro-action-item")) {
+            return;
+        }
+        if (selectedActionId !== null) {
+            selectAction(null);
+        }
+    });
+
+    window.addEventListener("keydown", (event) => {
+        if (selectedActionId === null) {
             return;
         }
 
@@ -372,25 +382,36 @@ export function initMacroEditorShortcuts() {
             return;
         }
 
-        const key = event.key;
+        if (document.querySelector(".drawer-overlay.active, .modal.active")) {
+            return;
+        }
 
-        if (key === "Delete") {
+        const key = event.key;
+        const code = event.code;
+
+        if (key === "Delete" || code === "Delete") {
             event.preventDefault();
+            event.stopPropagation();
             void removeAction(selectedActionId);
             return;
         }
 
-        if ((event.ctrlKey || event.metaKey) && key.toLowerCase() === "d") {
+        if ((event.ctrlKey || event.metaKey) && (key.toLowerCase() === "d" || code === "KeyD")) {
             event.preventDefault();
+            event.stopPropagation();
             void duplicateAction(selectedActionId);
             return;
         }
 
-        if ((event.ctrlKey || event.metaKey) && event.shiftKey && (key === "ArrowUp" || key === "ArrowDown")) {
+        const isArrowUp = key === "ArrowUp" || code === "ArrowUp";
+        const isArrowDown = key === "ArrowDown" || code === "ArrowDown";
+
+        if ((event.ctrlKey || event.metaKey) && event.shiftKey && (isArrowUp || isArrowDown)) {
             event.preventDefault();
-            moveSelectedAction(key === "ArrowUp" ? -1 : 1);
+            event.stopPropagation();
+            moveSelectedAction(isArrowUp ? -1 : 1);
         }
-    });
+    }, true);
 }
 
 function appendHighlightedDetails(container: Element, text: string) {
@@ -595,6 +616,13 @@ export function renderActions(options: { animateNew?: boolean } = {}) {
         if (existing) {
             existing.replaceWith(item);
         } else {
+            listContainer.appendChild(item);
+        }
+    });
+
+    macroState.actions.forEach((action) => {
+        const item = listContainer.querySelector<HTMLElement>(`.macro-action-item[data-action-id="${action.id}"]`);
+        if (item) {
             listContainer.appendChild(item);
         }
     });
