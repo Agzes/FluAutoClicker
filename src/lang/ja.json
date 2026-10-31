@@ -39,6 +39,8 @@
     "macro.record": "録画",
     "macro.filters": "フィルター",
     "macro.clear": "クリア",
+    "macro.clear_title": "マクロをクリア",
+    "macro.clear_confirm": "すべてのアクション（{count}件）を削除しますか？",
     "macro.add": "追加",
     "macro.custom": "カスタム",
     "macro.no_actions": "記録されたアクションはまだありません",

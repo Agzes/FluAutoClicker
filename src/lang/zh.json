@@ -39,6 +39,8 @@
     "macro.record": "录制",
     "macro.filters": "过滤器",
     "macro.clear": "清空",
+    "macro.clear_title": "清空宏",
+    "macro.clear_confirm": "删除全部 {count} 个动作？",
     "macro.add": "添加",
     "macro.custom": "自定义",
     "macro.no_actions": "尚未录制任何动作",

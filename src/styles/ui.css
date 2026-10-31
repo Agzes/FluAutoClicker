@@ -447,11 +447,14 @@
 }
 
 #profile-delete-confirm,
-#profile-delete-confirm .icon {
+#profile-delete-confirm .icon,
+#macro-clear-confirm-apply,
+#macro-clear-confirm-apply .icon {
     color: #ff4b4b !important;
 }
 
-#profile-delete-confirm:hover {
+#profile-delete-confirm:hover,
+#macro-clear-confirm-apply:hover {
     background: color-mix(in srgb, #ff4b4b 15%, var(--control-bg));
 }
 

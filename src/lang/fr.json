@@ -39,6 +39,8 @@
     "macro.record": "Enregistrer",
     "macro.filters": "Filtres",
     "macro.clear": "Effacer",
+    "macro.clear_title": "Effacer la macro",
+    "macro.clear_confirm": "Supprimer les {count} actions ?",
     "macro.add": "Ajouter",
     "macro.custom": "Personnalisé",
     "macro.no_actions": "Aucune action enregistrée",

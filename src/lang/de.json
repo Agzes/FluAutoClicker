@@ -39,6 +39,8 @@
     "macro.record": "Aufnahme",
     "macro.filters": "Filter",
     "macro.clear": "Leeren",
+    "macro.clear_title": "Makro leeren",
+    "macro.clear_confirm": "Alle {count} Aktionen löschen?",
     "macro.add": "Hinzufügen",
     "macro.custom": "Eigener",
     "macro.no_actions": "Noch keine Aktionen aufgenommen",

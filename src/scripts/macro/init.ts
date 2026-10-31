@@ -188,7 +188,10 @@ function initAddActionDrawer() {
 }
 
 function initClearButton(recordButton: HTMLElement | null) {
-    document.getElementById("macro-clear-btn")?.addEventListener("click", async () => {
+    const modal = document.getElementById("macro-clear-confirm-modal");
+    const modalText = document.getElementById("macro-clear-confirm-text");
+
+    const clearMacro = async () => {
         try {
             await invoke("clear_macros");
             macroState.actions = [];
@@ -199,6 +202,46 @@ function initClearButton(recordButton: HTMLElement | null) {
         } catch (error) {
             console.error("Failed to clear macros", error);
             notify(t("macro.clear_error", "Could not clear the macro. Try again in a moment."), "error", 2600);
+        }
+    };
+
+    const hideConfirm = () => {
+        if (!modal) return;
+        modal.classList.remove("active");
+        window.setTimeout(() => {
+            modal.style.display = "none";
+            document.getElementById("content")?.classList.remove("blurred");
+        }, 220);
+    };
+
+    const showConfirm = (count: number) => {
+        if (!modal) return;
+        if (modalText) {
+            modalText.textContent = t("macro.clear_confirm", "Clear all {count} actions?", {
+                count: String(count),
+            });
+        }
+        modal.style.display = "flex";
+        document.getElementById("content")?.classList.add("blurred");
+        requestAnimationFrame(() => modal.classList.add("active"));
+    };
+
+    document.getElementById("macro-clear-btn")?.addEventListener("click", () => {
+        if (macroState.actions.length === 0) {
+            void clearMacro();
+            return;
+        }
+        showConfirm(macroState.actions.length);
+    });
+
+    document.getElementById("macro-clear-confirm-close")?.addEventListener("click", hideConfirm);
+    document.getElementById("macro-clear-confirm-apply")?.addEventListener("click", () => {
+        hideConfirm();
+        void clearMacro();
+    });
+    modal?.addEventListener("click", (event) => {
+        if (event.target === modal) {
+            hideConfirm();
         }
     });
 }

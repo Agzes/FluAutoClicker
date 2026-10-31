@@ -39,6 +39,8 @@
     "macro.record": "Record",
     "macro.filters": "Filters",
     "macro.clear": "Clear",
+    "macro.clear_title": "Clear macro",
+    "macro.clear_confirm": "Clear all {count} actions?",
     "macro.add": "Add",
     "macro.custom": "Custom",
     "macro.no_actions": "No actions recorded yet",

@@ -39,6 +39,8 @@
     "macro.record": "Grabar",
     "macro.filters": "Filtros",
     "macro.clear": "Limpiar",
+    "macro.clear_title": "Borrar macro",
+    "macro.clear_confirm": "¿Eliminar las {count} acciones?",
     "macro.add": "Añadir",
     "macro.custom": "Personalizado",
     "macro.no_actions": "Aún no se han grabado acciones",

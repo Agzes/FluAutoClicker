@@ -39,6 +39,8 @@
     "macro.record": "Запись",
     "macro.filters": "Фильтры",
     "macro.clear": "Очистить",
+    "macro.clear_title": "Очистить макрос",
+    "macro.clear_confirm": "Удалить все действия ({count})?",
     "macro.add": "Добавить",
     "macro.custom": "Своё",
     "macro.no_actions": "Нет записанных действий",

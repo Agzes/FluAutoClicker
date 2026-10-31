@@ -39,6 +39,8 @@
     "macro.record": "녹화",
     "macro.filters": "필터",
     "macro.clear": "지우기",
+    "macro.clear_title": "매크로 지우기",
+    "macro.clear_confirm": "모든 동작({count}개)을 삭제할까요?",
     "macro.add": "추가",
     "macro.custom": "사용자 정의",
     "macro.no_actions": "기록된 동작이 없습니다",
