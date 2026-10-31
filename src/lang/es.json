@@ -171,6 +171,7 @@
     "jiggler.linear": "Lineal",
     "jiggler.circle": "Círculo",
     "jiggler.ozone": "O-Zone",
+    "jiggler.figure8": "Ocho",
     "jiggler.ozone_desc": "O-Zone crea un área alrededor del inicio y hace clics aleatorios dentro. El inicio por atajo usa el cursor actual; por botón espera al primer clic.",
     "jiggler.timing": "Configuración de tiempo",
     "jiggler.interval": "Intervalo de movimiento",

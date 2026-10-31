@@ -171,6 +171,7 @@
     "jiggler.linear": "Linear",
     "jiggler.circle": "Circle",
     "jiggler.ozone": "O-Zone",
+    "jiggler.figure8": "Figure 8",
     "jiggler.ozone_desc": "O-Zone creates a radius around the start point and clicks random positions inside it. Hotkey start uses the current cursor; button start waits for the first click.",
     "jiggler.timing": "Timing Configuration",
     "jiggler.interval": "Movement Interval",

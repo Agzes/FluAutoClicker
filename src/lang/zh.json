@@ -171,6 +171,7 @@
     "jiggler.linear": "直线运动",
     "jiggler.circle": "圆周运动",
     "jiggler.ozone": "O-Zone 区域",
+    "jiggler.figure8": "8字",
     "jiggler.ozone_desc": "O-Zone 模式将以起点为圆心创建一个半径区域，并在其中进行随机点击。通过快捷键启动将直接锁定当前光标，通过界面按钮启动则会等待您的第一次点击。",
     "jiggler.timing": "时间参数配置",
     "jiggler.interval": "指针移动间隔",

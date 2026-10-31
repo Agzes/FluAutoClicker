@@ -719,6 +719,7 @@ pub async fn set_jiggler_pattern(
         "lin" => JigglerPattern::Linear,
         "cir" => JigglerPattern::Circle,
         "ozn" => JigglerPattern::OZone,
+        "lis" => JigglerPattern::Lissajous,
         _ => JigglerPattern::Random,
     };
     *state.jiggler_pattern.lock().await = jiggler_pattern;

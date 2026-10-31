@@ -171,6 +171,7 @@
     "jiggler.linear": "Linear",
     "jiggler.circle": "Kreis",
     "jiggler.ozone": "O-Zone",
+    "jiggler.figure8": "Acht",
     "jiggler.ozone_desc": "O-Zone erstellt einen Radius um den Startpunkt und klickt zufällig darin. Hotkey-Start nutzt aktuellen Cursor; Button-Start wartet auf ersten Klick.",
     "jiggler.timing": "Timing-Konfiguration",
     "jiggler.interval": "Bewegungsintervall",

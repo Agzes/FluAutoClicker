@@ -85,6 +85,8 @@ pub enum JigglerPattern {
     Circle,
 
     OZone,
+
+    Lissajous,
 }
 
 #[derive(Clone, Copy, Default, PartialEq)]

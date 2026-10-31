@@ -236,6 +236,15 @@ function setActiveButton(groupId: string, value: string) {
             .getElementById("jiggler-ozone-help")
             ?.classList.toggle("visible", value === "ozn");
     }
+
+    if (group.classList.contains("multi-button-row")) {
+        const indicator = group.querySelector<HTMLElement>(".slide-indicator");
+        const active = group.querySelector<HTMLElement>(".multi-btn.active");
+        if (indicator && active && active.offsetWidth > 0) {
+            indicator.style.width = `${active.offsetWidth}px`;
+            indicator.style.left = `${active.offsetLeft}px`;
+        }
+    }
 }
 
 function setKeyboardSelection(key: string, modifiers: string) {

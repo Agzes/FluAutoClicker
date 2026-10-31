@@ -397,23 +397,26 @@ export function initJiggler() {
             )?.dataset.pattern;
             ozoneHelp?.classList.toggle("visible", activePattern === "ozn");
         };
+        const positionIndicator = () => {
+            const indicator = patternRow.querySelector(
+                ".slide-indicator",
+            ) as HTMLElement | null;
+            const activeBtn = patternRow.querySelector(
+                ".multi-btn.active",
+            ) as HTMLElement | null;
+            if (indicator && activeBtn) {
+                indicator.style.width = `${activeBtn.offsetWidth}px`;
+                indicator.style.left = `${activeBtn.offsetLeft}px`;
+            }
+        };
         syncOzoneHelp();
+        positionIndicator();
         buttons.forEach((btn) => {
             btn.addEventListener("click", async () => {
                 buttons.forEach((b) => b.classList.remove("active"));
                 btn.classList.add("active");
                 syncOzoneHelp();
-
-                const indicator = patternRow.querySelector(
-                    ".slide-indicator",
-                ) as HTMLElement;
-                const activeBtn = patternRow.querySelector(
-                    ".multi-btn.active",
-                ) as HTMLElement;
-                if (indicator && activeBtn) {
-                    indicator.style.width = `${activeBtn.offsetWidth}px`;
-                    indicator.style.left = `${activeBtn.offsetLeft}px`;
-                }
+                positionIndicator();
 
                 const pattern = (btn as HTMLElement).dataset.pattern;
                 if (pattern) {

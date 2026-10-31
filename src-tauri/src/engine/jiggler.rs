@@ -30,24 +30,39 @@ fn circle_points(radius: i32, num_points: usize) -> Vec<(i32, i32)> {
     points
 }
 
+fn lissajous_points(radius: i32, num_points: usize) -> Vec<(i32, i32)> {
+    let mut points = Vec::with_capacity(num_points);
+    for i in 0..num_points {
+        let angle = 2.0 * std::f64::consts::PI * (i as f64) / (num_points as f64);
+        let x = (radius as f64 * angle.sin()) as i32;
+        let y = (radius as f64 * (2.0 * angle).sin()) as i32;
+        points.push((x, y));
+    }
+    points
+}
+
 fn next_jiggle(
     pattern: JigglerPattern,
     dist: i32,
-    circle_step: &mut usize,
+    path_step: &mut usize,
     rng: &mut impl Rng,
 ) -> Vec<(i32, i32)> {
     match pattern {
         JigglerPattern::Linear => vec![(dist, 0)],
         JigglerPattern::Circle => {
             let points = circle_points((dist / 2).max(1), 16);
-            let (x, y) = points[*circle_step % 16];
-            let prev_step = if *circle_step == 0 {
-                15
-            } else {
-                *circle_step - 1
-            };
+            let (x, y) = points[*path_step % 16];
+            let prev_step = if *path_step == 0 { 15 } else { *path_step - 1 };
             let (prev_x, prev_y) = points[prev_step % 16];
-            *circle_step = (*circle_step + 1) % 16;
+            *path_step = (*path_step + 1) % 16;
+            vec![(x - prev_x, y - prev_y)]
+        }
+        JigglerPattern::Lissajous => {
+            let points = lissajous_points((dist / 2).max(1), 32);
+            let (x, y) = points[*path_step % 32];
+            let prev_step = if *path_step == 0 { 31 } else { *path_step - 1 };
+            let (prev_x, prev_y) = points[prev_step % 32];
+            *path_step = (*path_step + 1) % 32;
             vec![(x - prev_x, y - prev_y)]
         }
         JigglerPattern::OZone => {
@@ -95,7 +110,7 @@ async fn move_mouse(enigo: &mut Option<Enigo>, dx: i32, dy: i32) {
 }
 
 pub async fn jiggler_task(state: Arc<AppState>) {
-    let mut circle_step = 0usize;
+    let mut path_step = 0usize;
     let mut rng = SmallRng::from_entropy();
     #[cfg(not(target_os = "linux"))]
     let mut enigo = Enigo::new(&Settings::default()).ok();
@@ -110,7 +125,7 @@ pub async fn jiggler_task(state: Arc<AppState>) {
                 tokio::time::sleep(tokio::time::Duration::from_millis(interval as u64)).await;
                 continue;
             }
-            let moves = next_jiggle(pattern, dist, &mut circle_step, &mut rng);
+            let moves = next_jiggle(pattern, dist, &mut path_step, &mut rng);
 
             for (dx, dy) in moves {
                 #[cfg(target_os = "linux")]
@@ -124,5 +139,19 @@ pub async fn jiggler_task(state: Arc<AppState>) {
         } else {
             tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lissajous_points_stay_within_distance_and_include_motion() {
+        let points = lissajous_points(25, 32);
+
+        assert_eq!(points.len(), 32);
+        assert!(points.iter().all(|(x, y)| x.abs() <= 25 && y.abs() <= 25));
+        assert!(points.windows(2).any(|pair| pair[0] != pair[1]));
     }
 }

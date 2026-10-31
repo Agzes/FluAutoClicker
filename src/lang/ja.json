@@ -171,6 +171,7 @@
     "jiggler.linear": "直線",
     "jiggler.circle": "円形",
     "jiggler.ozone": "O-Zone 領域",
+    "jiggler.figure8": "8の字",
     "jiggler.ozone_desc": "O-Zoneは開始点の周囲に半径領域を作成し、その内部のランダムな位置をクリックします。ホットキーによる開始は現在のカーソルを使用し、ボタンによる開始は最初のクリックを待ちます。",
     "jiggler.timing": "タイミング設定",
     "jiggler.interval": "移動間隔",

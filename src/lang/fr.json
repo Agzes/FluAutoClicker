@@ -171,6 +171,7 @@
     "jiggler.linear": "Linéaire",
     "jiggler.circle": "Cercle",
     "jiggler.ozone": "O-Zone",
+    "jiggler.figure8": "Huit",
     "jiggler.ozone_desc": "O-Zone crée une zone autour du point de départ et clique de façon aléatoire dedans. Le raccourci utilise le curseur actuel ; le bouton attend le premier clic.",
     "jiggler.timing": "Configuration du temps",
     "jiggler.interval": "Intervalle de mouvement",

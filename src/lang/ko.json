@@ -171,6 +171,7 @@
     "jiggler.linear": "직선형",
     "jiggler.circle": "원형",
     "jiggler.ozone": "O-Zone 영역형",
+    "jiggler.figure8": "8자",
     "jiggler.ozone_desc": "O-Zone 모드는 시작점을 기준으로 반지름 영역을 생성한 뒤 내부 무작위 위치를 클릭합니다. 단축키로 시작하면 현재 커서 위치를 기준으로 작동하며, 화면 버튼으로 시작하면 첫 번째 클릭을 대기합니다.",
     "jiggler.timing": "타이밍 매개변수 설정",
     "jiggler.interval": "이동 시간 간격",

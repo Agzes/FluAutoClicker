@@ -557,6 +557,7 @@ pub(crate) async fn apply_config_to_state(state: &Arc<AppState>, config: &AppCon
         "lin" => JigglerPattern::Linear,
         "cir" => JigglerPattern::Circle,
         "ozn" => JigglerPattern::OZone,
+        "lis" => JigglerPattern::Lissajous,
         _ => JigglerPattern::Random,
     };
 
