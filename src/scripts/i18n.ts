@@ -199,6 +199,8 @@ function openLanguagePicker(): void {
 
   list.innerHTML = "";
 
+  const referenceKeys = Object.keys(getLangStrings(DEFAULT_LANG));
+
   LANGUAGES.forEach((lang) => {
     const card = document.createElement("button");
     card.type = "button";
@@ -221,6 +223,18 @@ function openLanguagePicker(): void {
       aiBadge.innerHTML = "&#57787;";
       aiBadge.title = t("lang.ai_notice", "AI translation");
       card.appendChild(aiBadge);
+    }
+
+    const languageKeys = getLangStrings(lang.code);
+    const missingCount = referenceKeys.filter((key) => !(key in languageKeys)).length;
+    if (missingCount > 0) {
+      const missingBadge = document.createElement("span");
+      missingBadge.className = "lang-missing-badge";
+      missingBadge.textContent = String(missingCount);
+      missingBadge.title = t("lang.missing_keys", "{count} untranslated strings", {
+        count: String(missingCount),
+      });
+      card.appendChild(missingBadge);
     }
 
 

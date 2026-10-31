@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { getPlatformCapabilities } from "./platform-capabilities";
 
 const UINPUT_DISMISS_KEY = "flu_uinput_permission_dismissed_v1";
+let permissionActionInFlight = false;
 
 type UinputModalMode = "startup" | "feature";
 
@@ -59,6 +60,11 @@ async function refreshUinputStatus() {
 }
 
 async function runPermissionAction(command: "request_uinput_permissions" | "install_uinput_udev_rule") {
+    if (permissionActionInFlight) {
+        return;
+    }
+
+    permissionActionInFlight = true;
     setBusy(true);
     setStatus(
         command === "install_uinput_udev_rule"
@@ -82,6 +88,7 @@ async function runPermissionAction(command: "request_uinput_permissions" | "inst
     } catch (error) {
         setStatus(String(error || "Permission request failed."), "error");
     } finally {
+        permissionActionInFlight = false;
         setBusy(false);
     }
 }

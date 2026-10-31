@@ -45,18 +45,32 @@ async function reapplyAcrylic() {
     }
 }
 
+const unlisteners: Array<() => void> = [];
+let windowListenersBound = false;
+
 export function initWindowFocusState() {
+    if (windowListenersBound) {
+        return;
+    }
+    windowListenersBound = true;
+
     void currentWindow.onFocusChanged(() => {
         void reapplyAcrylic();
-    });
+    }).then((unlisten) => unlisteners.push(unlisten));
 
     void currentWindow.onMoved(async () => {
         void reapplyAcrylic();
-    });
+    }).then((unlisten) => unlisteners.push(unlisten));
 
     void currentWindow.onResized(() => {
         setTimeout(() => void reapplyAcrylic(), 100);
-    });
+    }).then((unlisten) => unlisteners.push(unlisten));
+
+    window.addEventListener("beforeunload", () => {
+        unlisteners.forEach((unlisten) => unlisten());
+        unlisteners.length = 0;
+        windowListenersBound = false;
+    }, { once: true });
 }
 
 export async function initWindowEffects() {

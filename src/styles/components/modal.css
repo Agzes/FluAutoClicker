@@ -1581,6 +1581,16 @@
     left: -2px;
 }
 
+.lang-missing-badge {
+    font-size: 10px;
+    font-weight: 600;
+    color: #ff9b9b;
+    background: color-mix(in srgb, #ff6666 16%, transparent);
+    border-radius: 6px;
+    padding: 1px 5px;
+    flex-shrink: 0;
+}
+
 .lang-card-flag {
     display: flex;
     align-items: center;
