@@ -154,6 +154,15 @@ export function initJigglerPreview() {
     window.addEventListener("flu:jiggler-preview", draw);
     window.addEventListener("flu:settings-applied", draw);
 
-    new ResizeObserver(resize).observe(canvas);
+    let resizeFrame = 0;
+    const scheduleResize = () => {
+        if (resizeFrame) return;
+        resizeFrame = window.requestAnimationFrame(() => {
+            resizeFrame = 0;
+            resize();
+        });
+    };
+
+    new ResizeObserver(scheduleResize).observe(canvas);
     resize();
 }
