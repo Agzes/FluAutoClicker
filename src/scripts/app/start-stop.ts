@@ -77,6 +77,83 @@ function getMouseIntervalMs(): number {
     return hours * 3_600_000 + minutes * 60_000 + seconds * 1_000 + milliseconds;
 }
 
+function getNumber(id: string): number {
+    return Number.parseInt((document.getElementById(id) as HTMLInputElement | null)?.value || "0", 10) || 0;
+}
+
+function getActiveToggle(id: string): string {
+    return document.querySelector(`#${id} .toggle-option.active`)?.getAttribute("data-value") || "";
+}
+
+function getHoldMs(valueId: string, unitId: string): number {
+    const value = getNumber(valueId);
+    return getActiveToggle(unitId) === "s" ? value * 1000 : value;
+}
+
+function getFiniteSeconds(repeatId: string, countId: string, unitId: string): number {
+    if (getActiveToggle(repeatId) !== "finite") return 0;
+    if (getActiveToggle(unitId) !== "seconds") return 0;
+    return getNumber(countId);
+}
+
+const activeDangerWarnings = new Set<string>();
+
+function warnDangerousSettings(tab: SupportedTab): void {
+    const warnings: string[] = [];
+
+    if (tab === "mouse") {
+        const interval = getMouseIntervalMs();
+        const cps = interval > 0 ? 1000 / interval : 0;
+        if (cps > 500) {
+            warnings.push(t("warning.high_cps", "High CPS ({cps}) may be unstable.", {
+                cps: String(Math.round(cps)),
+            }));
+        }
+
+        if (getActiveToggle("press-hold-toggle") === "hold") {
+            const holdMs = getHoldMs("mouse-hold-duration", "mouse-hold-mode-toggle");
+            if (holdMs > 60_000) {
+                warnings.push(t("warning.long_hold", "Hold longer than {seconds}s may be hard to stop.", {
+                    seconds: String(Math.round(holdMs / 1000)),
+                }));
+            }
+        }
+
+        const seconds = getFiniteSeconds("repeat-toggle", "mouse-repeat-count", "finite-mode-toggle");
+        if (seconds > 3600) {
+            warnings.push(t("warning.long_finite", "Finite run longer than 1 hour. Keep the stop hotkey ready."));
+        }
+    } else if (tab === "keyboard") {
+        if (getActiveToggle("kb-mode-toggle") === "hold") {
+            const holdMs = getHoldMs("kb-hold-duration", "kb-hold-mode-toggle");
+            if (holdMs > 60_000) {
+                warnings.push(t("warning.long_hold", "Hold longer than {seconds}s may be hard to stop.", {
+                    seconds: String(Math.round(holdMs / 1000)),
+                }));
+            }
+        }
+
+        const seconds = getFiniteSeconds("kb-repeat-toggle", "kb-repeat-count", "kb-finite-mode-toggle");
+        if (seconds > 3600) {
+            warnings.push(t("warning.long_finite", "Finite run longer than 1 hour. Keep the stop hotkey ready."));
+        }
+    } else {
+        const seconds = getFiniteSeconds("macro-repeat-toggle", "macro-repeat-count", "macro-finite-mode-toggle");
+        if (seconds > 3600) {
+            warnings.push(t("warning.long_finite", "Finite run longer than 1 hour. Keep the stop hotkey ready."));
+        }
+    }
+
+    const next = new Set(warnings);
+    warnings.forEach((message) => {
+        if (!activeDangerWarnings.has(message)) {
+            notify(message, "warning", 4200);
+        }
+    });
+    activeDangerWarnings.clear();
+    next.forEach((message) => activeDangerWarnings.add(message));
+}
+
 function showTimingWarningModal() {
     const modal = document.getElementById("timing-warning-modal");
     const handle = document.getElementById("timing-unlock-handle");
@@ -147,6 +224,7 @@ async function handleStartButtonClick() {
         if (activeTab === "keyboard") {
             if (!isAlreadyRunning) {
                 await syncAllKeyboardSettings();
+                warnDangerousSettings("keyboard");
             }
 
             const isRunning = await invoke<boolean>("toggle_keyboard_clicker");
@@ -159,6 +237,7 @@ async function handleStartButtonClick() {
         if (activeTab === "macro") {
             if (!isAlreadyRunning) {
                 await ensureMacroReady();
+                warnDangerousSettings("macro");
             }
 
             const isRunning = await invoke<boolean>("toggle_macro_player");
@@ -175,6 +254,7 @@ async function handleStartButtonClick() {
 
         if (!isAlreadyRunning) {
             await syncAllMouseSettings();
+            warnDangerousSettings("mouse");
         }
         const isRunning = await toggleMouseClicker();
         rememberRunningMode("mouse", Boolean(isRunning));
@@ -195,6 +275,28 @@ export function initStartStopControls() {
             void handleStartButtonClick();
         });
     }
+
+    let warningTimer: number | null = null;
+    const scheduleDangerCheck = () => {
+        if (warningTimer !== null) {
+            window.clearTimeout(warningTimer);
+        }
+        warningTimer = window.setTimeout(() => {
+            warningTimer = null;
+            warnDangerousSettings(getActiveTab());
+        }, 250);
+    };
+
+    document.addEventListener("input", scheduleDangerCheck);
+    document.addEventListener("change", scheduleDangerCheck);
+    document.addEventListener("click", (event) => {
+        const target = event.target as HTMLElement | null;
+        if (target?.closest(".toggle-option, .multi-btn, .drawer-toggle")) {
+            scheduleDangerCheck();
+        }
+    });
+    window.addEventListener("flu:mode-changed", scheduleDangerCheck);
+    window.addEventListener("flu:settings-applied", scheduleDangerCheck);
 
     void listen<RunningPayload>("status-changed", (event) => {
         const isRunning = Boolean(event.payload.running);
