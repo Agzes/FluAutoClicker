@@ -152,6 +152,27 @@
     flex-direction: column;
     gap: 3px;
     min-height: 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+    scrollbar-gutter: stable;
+}
+
+.macro-list-container::-webkit-scrollbar {
+    width: 4px;
+    display: block;
+}
+
+.macro-list-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.macro-list-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.14);
+    border-radius: 4px;
+}
+
+.macro-list-container::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
 }
 
 #macro-section {
@@ -278,12 +299,12 @@
 }
 
 .macro-action-item.selected.playing {
-    background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+    background: color-mix(in srgb, var(--accent) 9%, var(--surface));
     box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .macro-action-item.playing {
-    background: color-mix(in srgb, var(--accent) 7%, var(--control-bg));
+    background: color-mix(in srgb, var(--accent) 7%, var(--surface));
     box-shadow: inset 2px 0 0 var(--accent);
 }
 
