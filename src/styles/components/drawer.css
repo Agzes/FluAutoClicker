@@ -387,6 +387,24 @@
     color: var(--text-dim);
 }
 
+#jiggler-pattern-row .multi-btn {
+    min-width: 0;
+    gap: 0;
+    padding: 0 2px;
+    white-space: nowrap;
+}
+
+#jiggler-pattern-row .multi-btn .icon {
+    margin-right: 3px !important;
+    font-size: 12px !important;
+}
+
+#jiggler-pattern-row .multi-btn span:not(.icon) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .jiggler-control-head {
     display: flex;
     align-items: center;
