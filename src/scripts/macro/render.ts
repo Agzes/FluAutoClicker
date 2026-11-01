@@ -319,7 +319,7 @@ async function removeAction(actionId: number) {
         await invoke("remove_macro_action", { actionId, action_id: actionId });
         macroState.actions = macroState.actions.filter((entry) => entry.id !== actionId);
         macroState.rawActions = macroState.rawActions.filter((entry) => Number(entry.id) !== actionId);
-        renderActions();
+        renderActions({ animateReorder: true });
     } catch (error) {
         console.error("Failed to remove macro action", error);
         await loadActionsFromBackend();
@@ -357,7 +357,7 @@ function moveSelectedAction(delta: number) {
         .map((action) => rawById.get(action.id))
         .filter((action): action is MacroBackendAction => Boolean(action));
 
-    renderActions();
+    renderActions({ animateReorder: true });
     void persistActionOrder(nextActions.map((action) => action.id), previousActions);
 }
 
@@ -560,7 +560,7 @@ function createActionElement(action: (typeof macroState.actions)[number], animat
     return item;
 }
 
-export function renderActions(options: { animateNew?: boolean } = {}) {
+export function renderActions(options: { animateNew?: boolean; animateReorder?: boolean } = {}) {
     const rawTotalMs = getMacroDurationMs(macroState.rawActions);
     const speedMultiplier = (window as any).flu_macro_speed_multiplier || 1.0;
     const totalMs = Math.round(rawTotalMs / speedMultiplier);
@@ -578,6 +578,17 @@ export function renderActions(options: { animateNew?: boolean } = {}) {
     if (!listContainer) {
         return;
     }
+
+    const previousPositions = options.animateReorder
+        ? new Map(
+            getActionItems()
+                .map((item) => {
+                    const id = getActionIdFromElement(item);
+                    return id === null ? null : ([id, item.getBoundingClientRect()] as const);
+                })
+                .filter((entry): entry is readonly [number, DOMRect] => entry !== null),
+        )
+        : null;
 
     if (selectedActionId !== null && !macroState.actions.some((action) => action.id === selectedActionId)) {
         selectedActionId = null;
@@ -626,6 +637,29 @@ export function renderActions(options: { animateNew?: boolean } = {}) {
             listContainer.appendChild(item);
         }
     });
+
+    if (previousPositions) {
+        macroState.actions.forEach((action) => {
+            const item = listContainer.querySelector<HTMLElement>(`.macro-action-item[data-action-id="${action.id}"]`);
+            const previous = previousPositions.get(action.id);
+            if (!item || !previous) return;
+
+            const next = item.getBoundingClientRect();
+            const deltaY = previous.top - next.top;
+            if (Math.abs(deltaY) < 1) return;
+
+            item.animate(
+                [
+                    { transform: `translateY(${deltaY}px)` },
+                    { transform: "translateY(0)" },
+                ],
+                {
+                    duration: 180,
+                    easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+                },
+            );
+        });
+    }
 
     if (options.animateNew && addedNewItemAtEnd) {
         const isMinimized = document.body.classList.contains("window-minimized") || document.hidden;

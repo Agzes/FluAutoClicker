@@ -139,6 +139,7 @@
     min-height: 0;
     overflow: hidden;
     margin-bottom: 5px;
+    position: relative;
 }
 
 .macro-list-container {
@@ -150,29 +151,65 @@
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
     min-height: 0;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
-    scrollbar-gutter: stable;
+    scrollbar-width: none;
 }
 
 .macro-list-container::-webkit-scrollbar {
-    width: 4px;
-    display: block;
+    display: none;
 }
 
-.macro-list-container::-webkit-scrollbar-track {
-    background: transparent;
+.macro-list-row:has(.macro-scrollbar.visible) .macro-list-container {
+    padding-right: 13px;
 }
 
-.macro-list-container::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.14);
+.macro-scrollbar {
+    position: absolute;
+    top: 6px;
+    bottom: 6px;
+    right: 6px;
+    width: 6px;
+    background: var(--control-bg);
+    border-radius: var(--radius-sm);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+}
+
+.macro-scrollbar.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.macro-scrollbar-thumb {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    background: var(--accent-dim);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 4px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    cursor: grab;
+    transition:
+        top 0.14s ease-out,
+        height 0.16s ease-out,
+        background-color 0.2s ease;
 }
 
-.macro-list-container::-webkit-scrollbar-thumb:hover {
+.macro-scrollbar-thumb:hover {
     background: var(--accent);
+}
+
+.macro-scrollbar-thumb.dragging {
+    background: var(--accent);
+    transition: background-color 0.2s ease;
+}
+
+.macro-scrollbar-thumb:active {
+    cursor: grabbing;
 }
 
 #macro-section {
@@ -290,27 +327,24 @@
 }
 
 .macro-action-item.selected {
-    background: color-mix(in srgb, var(--accent) 8%, var(--surface));
-    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--accent) 14%, transparent);
+    background: var(--control-dark);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .macro-action-item.selected:hover {
-    background: color-mix(in srgb, var(--accent) 11%, var(--surface));
+    background: color-mix(in srgb, var(--accent) 5%, var(--control-dark));
 }
 
-.macro-action-item.selected.playing {
-    background: color-mix(in srgb, var(--accent) 9%, var(--surface));
-    box-shadow: inset 2px 0 0 var(--accent);
-}
-
+.macro-action-item.selected.playing,
 .macro-action-item.playing {
-    background: color-mix(in srgb, var(--accent) 7%, var(--surface));
-    box-shadow: inset 2px 0 0 var(--accent);
+    background: var(--control-dark);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .macro-action-item.playing .action-icon {
     color: #000;
     background: var(--accent);
+    transform: scale(1.04);
 }
 
 .action-icon {
@@ -325,6 +359,10 @@
     font-size: 13px;
     flex-shrink: 0;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    transition:
+        background-color 0.18s ease,
+        color 0.18s ease,
+        transform 0.18s ease;
 }
 
 .action-drag-handle {
