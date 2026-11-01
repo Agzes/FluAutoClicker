@@ -198,12 +198,6 @@ function setInputValue(id: string, value: string | number) {
     }
 }
 
-function setSliderValueText(sliderId: string, value: string) {
-    const slider = document.getElementById(sliderId) as HTMLInputElement | null;
-    const valueEl = slider?.parentElement?.querySelector(".visual-slider-value");
-    if (valueEl) valueEl.textContent = value;
-}
-
 function refreshSliderFills() {
     document.querySelectorAll(".interval-slider").forEach((slider) => {
         updateSliderFill(slider as HTMLInputElement);
@@ -375,11 +369,12 @@ function applyConfigToUi(config: AppConfigFile) {
     setInputValue("kb-hold-duration", config.keyboard.hold_duration);
     setInputValue("kb-repeat-count", config.keyboard.repeat_count);
 
-    const jigglerIntervalSeconds = Math.max(1, Math.round(config.jiggler.interval_ms / 1000));
-    setInputValue("jiggler-slider", jigglerIntervalSeconds);
-    setInputValue("jiggler-distance-slider", config.jiggler.distance);
-    setSliderValueText("jiggler-slider", `${jigglerIntervalSeconds}s`);
-    setSliderValueText("jiggler-distance-slider", `${config.jiggler.distance}px`);
+    const jigglerIntervalMs = Math.min(300000, Math.max(100, config.jiggler.interval_ms));
+    const jigglerDistance = Math.min(500, Math.max(5, config.jiggler.distance));
+    setInputValue("jiggler-slider", jigglerIntervalMs);
+    setInputValue("jiggler-interval-input", jigglerIntervalMs);
+    setInputValue("jiggler-distance-slider", jigglerDistance);
+    setInputValue("jiggler-distance-input", jigglerDistance);
 
     setActiveButton("mouse-button-toggle", config.mouse.button);
     setActiveButton("press-hold-toggle", config.mouse.click_mode);
@@ -561,8 +556,8 @@ async function captureConfigSnapshot(): Promise<AppConfigFile> {
         jiggler: {
             ...base.jiggler,
             active: document.getElementById("jiggler-toggle")?.classList.contains("active") ?? base.jiggler.active,
-            distance: getNumericValue("jiggler-distance-slider", base.jiggler.distance),
-            interval_ms: getNumericValue("jiggler-slider", Math.round(base.jiggler.interval_ms / 1000)) * 1000,
+            distance: getNumericValue("jiggler-distance-input", base.jiggler.distance),
+            interval_ms: getNumericValue("jiggler-interval-input", base.jiggler.interval_ms),
             pattern: getActiveValue("#jiggler-pattern-row .multi-btn.active", base.jiggler.pattern),
         },
         macro_settings: macroSettings,

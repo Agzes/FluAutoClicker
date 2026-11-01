@@ -2405,6 +2405,13 @@
                                             </button>
                                         </div>
                                     </div>
+                                    <div class="settings-list-item jiggler-preview-item">
+                                        <canvas
+                                            id="jiggler-preview-canvas"
+                                            class="jiggler-preview-canvas"
+                                            aria-hidden="true"
+                                        ></canvas>
+                                    </div>
                                     <div
                                         class="settings-list-item ozone-pattern-note"
                                         id="jiggler-ozone-help"
@@ -2443,37 +2450,34 @@
                                         style="
                                             flex-direction: column;
                                             align-items: stretch;
-                                            gap: 4px;
-                                            padding-bottom: 14px;
+                                            gap: 6px;
+                                            padding: 10px 10px 14px;
                                         "
                                     >
-                                        <div
-                                            class="visual-slider-info"
-                                            style="
-                                                display: flex;
-                                                justify-content: space-between;
-                                            "
-                                        >
+                                        <div class="jiggler-control-head">
                                             <span class="settings-item-title" data-i18n="jiggler.interval"
                                                 >Movement Interval</span
                                             >
-                                            <span
-                                                class="visual-slider-value"
-                                                style="
-                                                    font-size: 13px;
-                                                    font-weight: 700;
-                                                    color: var(--accent);
-                                                "
-                                                >30s</span
-                                            >
+                                            <label class="jiggler-value-box">
+                                                <input
+                                                    type="number"
+                                                    id="jiggler-interval-input"
+                                                    min="100"
+                                                    max="300000"
+                                                    step="50"
+                                                    value="30000"
+                                                />
+                                                <span>ms</span>
+                                            </label>
                                         </div>
                                         <input
                                             type="range"
                                             class="interval-slider"
                                             id="jiggler-slider"
-                                            min="1"
-                                            max="300"
-                                            value="30"
+                                            min="100"
+                                            max="300000"
+                                            step="50"
+                                            value="30000"
                                         />
                                     </div>
 
@@ -2485,29 +2489,25 @@
                                         style="
                                             flex-direction: column;
                                             align-items: stretch;
-                                            gap: 4px;
-                                            padding-bottom: 14px;
+                                            gap: 6px;
+                                            padding: 10px 10px 14px;
                                         "
                                     >
-                                        <div
-                                            class="visual-slider-info"
-                                            style="
-                                                display: flex;
-                                                justify-content: space-between;
-                                            "
-                                        >
+                                        <div class="jiggler-control-head">
                                             <span class="settings-item-title" data-i18n="jiggler.distance_radius"
                                                 >Distance Radius</span
                                             >
-                                            <span
-                                                class="visual-slider-value"
-                                                style="
-                                                    font-size: 13px;
-                                                    font-weight: 700;
-                                                    color: var(--accent);
-                                                "
-                                                >20px</span
-                                            >
+                                            <label class="jiggler-value-box">
+                                                <input
+                                                    type="number"
+                                                    id="jiggler-distance-input"
+                                                    min="5"
+                                                    max="500"
+                                                    step="1"
+                                                    value="20"
+                                                />
+                                                <span>px</span>
+                                            </label>
                                         </div>
                                         <input
                                             type="range"

@@ -387,6 +387,74 @@
     color: var(--text-dim);
 }
 
+.jiggler-control-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 26px;
+}
+
+.jiggler-value-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    height: 26px;
+    min-width: 96px;
+    padding: 0 8px;
+    background: var(--control-bg);
+    border-radius: var(--radius-inner);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    cursor: text;
+}
+
+.jiggler-value-box input {
+    width: 66px;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 400;
+    text-align: right;
+    padding: 0;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.jiggler-value-box input::-webkit-outer-spin-button,
+.jiggler-value-box input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.jiggler-value-box input:focus {
+    color: var(--accent);
+}
+
+.jiggler-value-box span {
+    font-size: 10px;
+    color: var(--text-muted);
+    line-height: 1;
+}
+
+.jiggler-preview-item {
+    display: flex;
+    padding: 6px;
+    align-items: stretch;
+}
+
+.jiggler-preview-canvas {
+    display: block;
+    width: 100%;
+    height: 78px;
+    background: var(--control-bg);
+    border-radius: var(--radius-inner);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
 .ozone-pattern-note {
     display: flex;
     pointer-events: none;

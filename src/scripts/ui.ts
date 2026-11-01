@@ -187,30 +187,6 @@ export function initInputs() {
         updateKbCps();
     }
 
-    
-    const jigglerSlider = document.getElementById('jiggler-slider') as HTMLInputElement;
-    if (jigglerSlider) {
-        jigglerSlider.addEventListener('input', () => {
-            const valEl = jigglerSlider.previousElementSibling?.querySelector('.visual-slider-value');
-            if (valEl) valEl.textContent = jigglerSlider.value + 's';
-            updateSliderFill(jigglerSlider);
-            
-            invoke("set_jiggler_interval", { interval: parseInt(jigglerSlider.value) * 1000 });
-        });
-        updateSliderFill(jigglerSlider);
-    }
-
-    const jigglerDistanceSlider = document.getElementById('jiggler-distance-slider') as HTMLInputElement;
-    if (jigglerDistanceSlider) {
-        jigglerDistanceSlider.addEventListener('input', () => {
-            const valEl = jigglerDistanceSlider.parentElement?.querySelector('.visual-slider-value');
-            if (valEl) valEl.textContent = jigglerDistanceSlider.value + 'px';
-            updateSliderFill(jigglerDistanceSlider);
-            invoke("set_jiggler_distance", { distance: parseInt(jigglerDistanceSlider.value) });
-        });
-        updateSliderFill(jigglerDistanceSlider);
-    }
-
     const numInputs = document.querySelectorAll('input[type="number"]');
     numInputs.forEach(input => {
         const inputEl = input as HTMLInputElement;

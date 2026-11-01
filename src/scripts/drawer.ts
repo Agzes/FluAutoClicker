@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { notify } from "./notifications";
+import { initJigglerPreview } from "./jiggler-preview";
 import { ensureUinputPermissionsForFeature } from "./uinput-permissions";
 import { updateSliderFill } from "./utils";
 import { t } from "./i18n";
@@ -370,6 +371,8 @@ export function initDrawer() {
 }
 
 export function initJiggler() {
+    initJigglerPreview();
+
     const jigglerToggle = document.getElementById("jiggler-toggle");
     if (jigglerToggle) {
         jigglerToggle.addEventListener("click", async () => {
@@ -428,36 +431,48 @@ export function initJiggler() {
 
     const intervalSlider = document.getElementById(
         "jiggler-slider",
-    ) as HTMLInputElement;
-    if (intervalSlider) {
-        intervalSlider.addEventListener("input", () => {
-            const value = parseInt(intervalSlider.value);
-            const valueDisplay = intervalSlider.parentElement?.querySelector(
-                ".visual-slider-value",
-            );
-            if (valueDisplay) {
-                valueDisplay.textContent = `${value}s`;
-            }
+    ) as HTMLInputElement | null;
+    const intervalInput = document.getElementById(
+        "jiggler-interval-input",
+    ) as HTMLInputElement | null;
+    const setIntervalValue = (value: number, updateInput: boolean, updateSlider: boolean) => {
+        const clamped = Math.min(300000, Math.max(100, Math.round(value)));
+        if (updateSlider && intervalSlider) intervalSlider.value = String(clamped);
+        if (updateInput && intervalInput) intervalInput.value = String(clamped);
+        invoke("set_jiggler_interval", { interval: clamped });
+    };
 
-            invoke("set_jiggler_interval", { interval: value * 1000 });
-        });
-    }
+    intervalSlider?.addEventListener("input", () => {
+        updateSliderFill(intervalSlider);
+        setIntervalValue(Number.parseInt(intervalSlider.value, 10) || 100, true, false);
+    });
+    intervalInput?.addEventListener("change", () => {
+        setIntervalValue(Number.parseInt(intervalInput.value, 10) || 100, false, true);
+    });
 
     const distanceSlider = document.getElementById(
         "jiggler-distance-slider",
-    ) as HTMLInputElement;
-    if (distanceSlider) {
-        distanceSlider.addEventListener("input", () => {
-            const value = parseInt(distanceSlider.value);
-            const valueDisplay = distanceSlider.parentElement?.querySelector(
-                ".visual-slider-value",
-            );
-            if (valueDisplay) {
-                valueDisplay.textContent = `${value}px`;
-            }
-            invoke("set_jiggler_distance", { distance: value });
-        });
-    }
+    ) as HTMLInputElement | null;
+    const distanceInput = document.getElementById(
+        "jiggler-distance-input",
+    ) as HTMLInputElement | null;
+    const setDistanceValue = (value: number, updateInput: boolean, updateSlider: boolean) => {
+        const clamped = Math.min(500, Math.max(5, Math.round(value)));
+        if (updateSlider && distanceSlider) distanceSlider.value = String(clamped);
+        if (updateInput && distanceInput) distanceInput.value = String(clamped);
+        invoke("set_jiggler_distance", { distance: clamped });
+        window.requestAnimationFrame(() =>
+            window.dispatchEvent(new CustomEvent("flu:jiggler-preview")),
+        );
+    };
+
+    distanceSlider?.addEventListener("input", () => {
+        updateSliderFill(distanceSlider);
+        setDistanceValue(Number.parseInt(distanceSlider.value, 10) || 5, true, false);
+    });
+    distanceInput?.addEventListener("change", () => {
+        setDistanceValue(Number.parseInt(distanceInput.value, 10) || 5, false, true);
+    });
 
     void listen("jiggler-status-changed", (event) => {
         const payload = event.payload as { active?: boolean };
