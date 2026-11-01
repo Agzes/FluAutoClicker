@@ -1640,6 +1640,141 @@ pub async fn duplicate_macro_action(
 }
 
 #[tauri::command]
+pub async fn add_macro_actions(
+    state: State<'_, Arc<AppState>>,
+    action_jsons: Vec<String>,
+    after_id: Option<u64>,
+) -> Result<Vec<u64>, String> {
+    if action_jsons.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let mut configs = Vec::with_capacity(action_jsons.len());
+    for action_json in action_jsons {
+        let mut config: MacroActionConfig = serde_json::from_str(&action_json)
+            .map_err(|e| format!("Failed to parse action: {}", e))?;
+        sanitize_macro_action_config(&mut config);
+        configs.push(config);
+    }
+
+    let mut actions = state.macro_engine.actions.lock().await;
+    if actions.len() + configs.len() > crate::engine::macro_engine::state::MAX_MACRO_ACTIONS {
+        return Err(format!(
+            "Macro cannot contain more than {} actions.",
+            crate::engine::macro_engine::state::MAX_MACRO_ACTIONS
+        ));
+    }
+
+    let insert_at = after_id
+        .and_then(|id| actions.iter().position(|action| action.id == id))
+        .map(|index| index + 1)
+        .unwrap_or(actions.len());
+
+    let mut new_ids = Vec::with_capacity(configs.len());
+    let new_actions: Vec<MacroAction> = configs
+        .into_iter()
+        .map(|config| {
+            let id = state
+                .macro_engine
+                .action_id_counter
+                .fetch_add(1, Ordering::SeqCst);
+            new_ids.push(id);
+            MacroAction {
+                id,
+                timestamp_ms: 0,
+                config,
+            }
+        })
+        .collect();
+    actions.splice(insert_at..insert_at, new_actions);
+    drop(actions);
+
+    let actions_clone = state.macro_engine.actions.lock().await.clone();
+    let repeat_mode = state.macro_engine.repeat_mode.lock().await.clone();
+    let recording_options = state.macro_engine.recording_options.lock().await.clone();
+    tokio::spawn(async move {
+        let _ = storage::save_macro(&actions_clone, &repeat_mode, &recording_options).await;
+    });
+
+    Ok(new_ids)
+}
+
+#[tauri::command]
+pub async fn remove_macro_actions(
+    state: State<'_, Arc<AppState>>,
+    action_ids: Vec<u64>,
+) -> Result<(), String> {
+    if action_ids.is_empty() {
+        return Ok(());
+    }
+
+    let ids: HashSet<u64> = action_ids.into_iter().collect();
+    let mut actions = state.macro_engine.actions.lock().await;
+    actions.retain(|action| !ids.contains(&action.id));
+    drop(actions);
+
+    let actions_clone = state.macro_engine.actions.lock().await.clone();
+    let repeat_mode = state.macro_engine.repeat_mode.lock().await.clone();
+    let recording_options = state.macro_engine.recording_options.lock().await.clone();
+    tokio::spawn(async move {
+        let _ = storage::save_macro(&actions_clone, &repeat_mode, &recording_options).await;
+    });
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn duplicate_macro_actions(
+    state: State<'_, Arc<AppState>>,
+    action_ids: Vec<u64>,
+) -> Result<Vec<u64>, String> {
+    if action_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let ids: HashSet<u64> = action_ids.into_iter().collect();
+    let mut actions = state.macro_engine.actions.lock().await;
+    let selected_count = actions
+        .iter()
+        .filter(|action| ids.contains(&action.id))
+        .count();
+    if actions.len() + selected_count > crate::engine::macro_engine::state::MAX_MACRO_ACTIONS {
+        return Err(format!(
+            "Macro cannot contain more than {} actions.",
+            crate::engine::macro_engine::state::MAX_MACRO_ACTIONS
+        ));
+    }
+
+    let mut next_actions = Vec::with_capacity(actions.len() + selected_count);
+    let mut new_ids = Vec::with_capacity(selected_count);
+    for action in actions.drain(..) {
+        let selected = ids.contains(&action.id);
+        next_actions.push(action.clone());
+        if selected {
+            let id = state
+                .macro_engine
+                .action_id_counter
+                .fetch_add(1, Ordering::SeqCst);
+            let mut duplicated = action;
+            duplicated.id = id;
+            next_actions.push(duplicated);
+            new_ids.push(id);
+        }
+    }
+    *actions = next_actions;
+    drop(actions);
+
+    let actions_clone = state.macro_engine.actions.lock().await.clone();
+    let repeat_mode = state.macro_engine.repeat_mode.lock().await.clone();
+    let recording_options = state.macro_engine.recording_options.lock().await.clone();
+    tokio::spawn(async move {
+        let _ = storage::save_macro(&actions_clone, &repeat_mode, &recording_options).await;
+    });
+
+    Ok(new_ids)
+}
+
+#[tauri::command]
 pub async fn reorder_macro_actions(
     state: State<'_, Arc<AppState>>,
     action_ids: Vec<u64>,

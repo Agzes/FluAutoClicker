@@ -61,7 +61,9 @@ type PointerDragState = {
 
 let pointerDragState: PointerDragState | null = null;
 let reorderRequestSerial = 0;
-let selectedActionId: number | null = null;
+let selectedActionIds = new Set<number>();
+let selectionAnchorId: number | null = null;
+let copiedActionJsons: string[] = [];
 
 function getListContainer() {
     return document.getElementById("macro-list-container");
@@ -301,55 +303,166 @@ function applyVisibleActionOrder(previousActions: MacroUiAction[]) {
     void persistActionOrder(visibleOrder, previousActions);
 }
 
-function selectAction(actionId: number | null) {
-    selectedActionId = actionId;
+function updateSelectionClasses() {
     getActionItems().forEach((item) => {
-        const isSelected = actionId !== null && getActionIdFromElement(item) === actionId;
+        const id = getActionIdFromElement(item);
+        const isSelected = id !== null && selectedActionIds.has(id);
         item.classList.toggle("selected", isSelected);
         item.setAttribute("aria-selected", String(isSelected));
     });
 }
 
-async function removeAction(actionId: number) {
-    if (selectedActionId === actionId) {
-        selectedActionId = null;
+function setSelection(ids: number[], anchorId: number | null = null) {
+    selectedActionIds = new Set(ids);
+    selectionAnchorId = anchorId;
+    updateSelectionClasses();
+}
+
+function clearSelection() {
+    selectedActionIds.clear();
+    selectionAnchorId = null;
+    updateSelectionClasses();
+}
+
+function orderedActionIds(): number[] {
+    return macroState.actions.map((action) => action.id);
+}
+
+function selectAction(actionId: number, event: MouseEvent) {
+    const ordered = orderedActionIds();
+    const index = ordered.indexOf(actionId);
+    if (index < 0) return;
+
+    if (event.shiftKey && selectionAnchorId !== null) {
+        const anchorIndex = ordered.indexOf(selectionAnchorId);
+        if (anchorIndex >= 0) {
+            const start = Math.min(anchorIndex, index);
+            const end = Math.max(anchorIndex, index);
+            setSelection(ordered.slice(start, end + 1), selectionAnchorId);
+            return;
+        }
     }
 
+    if (event.ctrlKey || event.metaKey) {
+        if (selectedActionIds.has(actionId)) {
+            selectedActionIds.delete(actionId);
+        } else {
+            selectedActionIds.add(actionId);
+        }
+        selectionAnchorId = actionId;
+        updateSelectionClasses();
+        return;
+    }
+
+    setSelection([actionId], actionId);
+}
+
+function selectionInListOrder(): number[] {
+    return orderedActionIds().filter((id) => selectedActionIds.has(id));
+}
+
+async function removeActions(actionIds: number[]) {
+    if (actionIds.length === 0) return;
+
     try {
-        await invoke("remove_macro_action", { actionId, action_id: actionId });
-        macroState.actions = macroState.actions.filter((entry) => entry.id !== actionId);
-        macroState.rawActions = macroState.rawActions.filter((entry) => Number(entry.id) !== actionId);
+        await invoke("remove_macro_actions", {
+            actionIds,
+            action_ids: actionIds,
+        });
+        const removed = new Set(actionIds);
+        macroState.actions = macroState.actions.filter((entry) => !removed.has(entry.id));
+        macroState.rawActions = macroState.rawActions.filter(
+            (entry) => !removed.has(Number(entry.id)),
+        );
+        actionIds.forEach((id) => selectedActionIds.delete(id));
+        if (selectionAnchorId !== null && removed.has(selectionAnchorId)) {
+            selectionAnchorId = null;
+        }
         renderActions({ animateReorder: true });
     } catch (error) {
-        console.error("Failed to remove macro action", error);
+        console.error("Failed to remove macro actions", error);
         await loadActionsFromBackend();
     }
 }
 
-async function duplicateAction(actionId: number) {
+async function duplicateActions(actionIds: number[]) {
+    if (actionIds.length === 0) return;
+
     try {
-        await invoke("duplicate_macro_action", { actionId, action_id: actionId });
+        const newIds = await invoke<number[]>("duplicate_macro_actions", {
+            actionIds,
+            action_ids: actionIds,
+        });
         await loadActionsFromBackend({ animateNew: true });
+        if (newIds.length > 0) {
+            setSelection(newIds, newIds[0] ?? null);
+        }
     } catch (error) {
-        console.error("Failed to duplicate macro action", error);
+        console.error("Failed to duplicate macro actions", error);
         await loadActionsFromBackend();
     }
 }
 
-function moveSelectedAction(delta: number) {
-    if (selectedActionId === null) {
-        return;
+function copySelectedActions() {
+    copiedActionJsons = macroState.rawActions
+        .filter((entry) => selectedActionIds.has(Number(entry.id)))
+        .map((entry) => (entry.config ? JSON.stringify(entry.config) : null))
+        .filter((entry): entry is string => Boolean(entry));
+}
+
+async function pasteCopiedActions() {
+    if (copiedActionJsons.length === 0) return;
+
+    const selected = selectionInListOrder();
+    const afterId = selected.length > 0 ? selected[selected.length - 1] : null;
+    try {
+        const newIds = await invoke<number[]>("add_macro_actions", {
+            actionJsons: copiedActionJsons,
+            action_jsons: copiedActionJsons,
+            afterId,
+            after_id: afterId,
+        });
+        await loadActionsFromBackend({ animateNew: true });
+        if (newIds.length > 0) {
+            setSelection(newIds, newIds[0] ?? null);
+        }
+    } catch (error) {
+        console.error("Failed to paste macro actions", error);
+        await loadActionsFromBackend();
     }
+}
+
+function moveSelectedActions(delta: number) {
+    const selected = new Set(selectionInListOrder());
+    if (selected.size === 0) return;
 
     const previousActions = [...macroState.actions];
-    const index = previousActions.findIndex((action) => action.id === selectedActionId);
-    const targetIndex = index + delta;
-    if (index < 0 || targetIndex < 0 || targetIndex >= previousActions.length) {
-        return;
-    }
-
     const nextActions = [...previousActions];
-    [nextActions[index], nextActions[targetIndex]] = [nextActions[targetIndex], nextActions[index]];
+
+    if (delta < 0) {
+        for (let index = 0; index < nextActions.length; index += 1) {
+            if (!selected.has(nextActions[index].id)) continue;
+            if (index === 0 || selected.has(nextActions[index - 1].id)) continue;
+            [nextActions[index - 1], nextActions[index]] = [
+                nextActions[index],
+                nextActions[index - 1],
+            ];
+        }
+    } else {
+        for (let index = nextActions.length - 1; index >= 0; index -= 1) {
+            if (!selected.has(nextActions[index].id)) continue;
+            if (
+                index === nextActions.length - 1 ||
+                selected.has(nextActions[index + 1].id)
+            ) {
+                continue;
+            }
+            [nextActions[index], nextActions[index + 1]] = [
+                nextActions[index + 1],
+                nextActions[index],
+            ];
+        }
+    }
 
     const rawById = new Map(macroState.rawActions.map((action) => [Number(action.id), action]));
     macroState.actions = nextActions;
@@ -367,16 +480,12 @@ export function initMacroEditorShortcuts() {
         if (target?.closest(".macro-action-item")) {
             return;
         }
-        if (selectedActionId !== null) {
-            selectAction(null);
+        if (selectedActionIds.size > 0) {
+            clearSelection();
         }
     });
 
     window.addEventListener("keydown", (event) => {
-        if (selectedActionId === null) {
-            return;
-        }
-
         const target = event.target as HTMLElement | null;
         if (target && (target.matches("input, textarea, select") || target.isContentEditable)) {
             return;
@@ -388,18 +497,52 @@ export function initMacroEditorShortcuts() {
 
         const key = event.key;
         const code = event.code;
+        const isPaste = (event.ctrlKey || event.metaKey) && (key.toLowerCase() === "v" || code === "KeyV");
+        const isSelectAll = (event.ctrlKey || event.metaKey) && (key.toLowerCase() === "a" || code === "KeyA");
+        if (selectedActionIds.size === 0 && !isPaste && !isSelectAll) {
+            return;
+        }
+
+        const ids = selectionInListOrder();
+
+        if (isSelectAll) {
+            event.preventDefault();
+            event.stopPropagation();
+            const all = orderedActionIds();
+            setSelection(all, all[0] ?? null);
+            return;
+        }
 
         if (key === "Delete" || code === "Delete") {
             event.preventDefault();
             event.stopPropagation();
-            void removeAction(selectedActionId);
+            void removeActions(ids);
+            return;
+        }
+
+        if (key === "Escape") {
+            clearSelection();
             return;
         }
 
         if ((event.ctrlKey || event.metaKey) && (key.toLowerCase() === "d" || code === "KeyD")) {
             event.preventDefault();
             event.stopPropagation();
-            void duplicateAction(selectedActionId);
+            void duplicateActions(ids);
+            return;
+        }
+
+        if ((event.ctrlKey || event.metaKey) && (key.toLowerCase() === "c" || code === "KeyC")) {
+            event.preventDefault();
+            event.stopPropagation();
+            copySelectedActions();
+            return;
+        }
+
+        if ((event.ctrlKey || event.metaKey) && (key.toLowerCase() === "v" || code === "KeyV")) {
+            event.preventDefault();
+            event.stopPropagation();
+            void pasteCopiedActions();
             return;
         }
 
@@ -409,7 +552,7 @@ export function initMacroEditorShortcuts() {
         if ((event.ctrlKey || event.metaKey) && event.shiftKey && (isArrowUp || isArrowDown)) {
             event.preventDefault();
             event.stopPropagation();
-            moveSelectedAction(isArrowUp ? -1 : 1);
+            moveSelectedActions(isArrowUp ? -1 : 1);
         }
     }, true);
 }
@@ -463,7 +606,7 @@ function createActionElement(action: (typeof macroState.actions)[number], animat
     if (macroState.currentPlayingActionId === action.id) {
         item.classList.add("playing");
     }
-    if (selectedActionId === action.id) {
+    if (selectedActionIds.has(action.id)) {
         item.classList.add("selected");
         item.setAttribute("aria-selected", "true");
     }
@@ -534,7 +677,7 @@ function createActionElement(action: (typeof macroState.actions)[number], animat
     item.querySelector(".action-remove")?.addEventListener("click", () => {
         item.classList.add("removing");
         window.setTimeout(() => {
-            void removeAction(action.id);
+            void removeActions([action.id]);
         }, 300);
     });
 
@@ -542,7 +685,7 @@ function createActionElement(action: (typeof macroState.actions)[number], animat
         if ((event.target as HTMLElement).closest("button")) {
             return;
         }
-        selectAction(action.id);
+        selectAction(action.id, event);
     });
 
     item.querySelector(".action-edit")?.addEventListener("click", () => {
@@ -550,7 +693,7 @@ function createActionElement(action: (typeof macroState.actions)[number], animat
     });
 
     item.querySelector(".action-duplicate")?.addEventListener("click", () => {
-        void duplicateAction(action.id);
+        void duplicateActions([action.id]);
     });
 
     if (animate) {
@@ -590,8 +733,16 @@ export function renderActions(options: { animateNew?: boolean; animateReorder?: 
         )
         : null;
 
-    if (selectedActionId !== null && !macroState.actions.some((action) => action.id === selectedActionId)) {
-        selectedActionId = null;
+    for (const id of [...selectedActionIds]) {
+        if (!macroState.actions.some((action) => action.id === id)) {
+            selectedActionIds.delete(id);
+        }
+    }
+    if (
+        selectionAnchorId !== null &&
+        !macroState.actions.some((action) => action.id === selectionAnchorId)
+    ) {
+        selectionAnchorId = null;
     }
 
     if (macroState.actions.length === 0) {
