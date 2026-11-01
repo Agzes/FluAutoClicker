@@ -916,6 +916,7 @@ pub fn run() {
             set_keyboard_variation_ms,
             add_macro_action,
             add_macro_actions,
+            export_macro_actions,
             update_macro_action,
             remove_macro_action,
             remove_macro_actions,

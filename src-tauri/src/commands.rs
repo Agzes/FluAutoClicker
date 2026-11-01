@@ -1640,6 +1640,26 @@ pub async fn duplicate_macro_action(
 }
 
 #[tauri::command]
+pub async fn export_macro_actions(
+    state: State<'_, Arc<AppState>>,
+    action_ids: Vec<u64>,
+) -> Result<Vec<String>, String> {
+    if action_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let ids: HashSet<u64> = action_ids.into_iter().collect();
+    let actions = state.macro_engine.actions.lock().await;
+    let mut exported = Vec::new();
+    for action in actions.iter().filter(|action| ids.contains(&action.id)) {
+        let json = serde_json::to_string(&action.config)
+            .map_err(|e| format!("Failed to export macro action: {}", e))?;
+        exported.push(json);
+    }
+    Ok(exported)
+}
+
+#[tauri::command]
 pub async fn add_macro_actions(
     state: State<'_, Arc<AppState>>,
     action_jsons: Vec<String>,

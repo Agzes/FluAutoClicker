@@ -403,11 +403,18 @@ async function duplicateActions(actionIds: number[]) {
     }
 }
 
-function copySelectedActions() {
-    copiedActionJsons = macroState.rawActions
-        .filter((entry) => selectedActionIds.has(Number(entry.id)))
-        .map((entry) => (entry.config ? JSON.stringify(entry.config) : null))
-        .filter((entry): entry is string => Boolean(entry));
+async function copySelectedActions() {
+    const ids = selectionInListOrder();
+    if (ids.length === 0) return;
+
+    try {
+        copiedActionJsons = await invoke<string[]>("export_macro_actions", {
+            actionIds: ids,
+            action_ids: ids,
+        });
+    } catch (error) {
+        console.error("Failed to copy macro actions", error);
+    }
 }
 
 async function pasteCopiedActions() {
@@ -535,7 +542,7 @@ export function initMacroEditorShortcuts() {
         if ((event.ctrlKey || event.metaKey) && (key.toLowerCase() === "c" || code === "KeyC")) {
             event.preventDefault();
             event.stopPropagation();
-            copySelectedActions();
+            void copySelectedActions();
             return;
         }
 
