@@ -529,6 +529,109 @@
     }
 }
 
+.selection-bar {
+    height: 0;
+    padding: 0 6px;
+    overflow: hidden;
+    opacity: 0;
+    flex-shrink: 0;
+    pointer-events: none;
+    transition:
+        height 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+        padding-top 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+        opacity 0.16s ease;
+}
+
+.selection-bar.visible {
+    height: 38px;
+    padding-top: 7px;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.selection-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 100%;
+    padding: 0 4px 0 8px;
+    background: var(--control-dark);
+    border-radius: var(--radius);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.selection-bar-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text);
+    font-size: 11px;
+    line-height: 1.2;
+}
+
+.selection-bar-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.selection-bar-btn {
+    width: 23px;
+    height: 23px;
+    flex: 0 0 23px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-inner);
+    background: var(--control-bg);
+    color: var(--text-dark);
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    transition:
+        background-color var(--transition),
+        color var(--transition);
+}
+
+.selection-bar-btn .icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-size: 14px;
+    line-height: 1;
+}
+
+#selection-bar-paste .icon {
+    transform: translateY(-1px);
+}
+
+.selection-bar-btn[hidden] {
+    display: none;
+}
+
+.selection-bar-btn:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--accent) 12%, var(--control-bg));
+    color: var(--accent);
+}
+
+.selection-bar-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+#selection-bar-delete:hover,
+#selection-bar-cancel:hover {
+    background: rgba(255, 82, 82, 0.1);
+    color: #ff5252;
+}
+
 #toast-container {
     display: flex;
     flex-direction: column;

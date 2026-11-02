@@ -260,6 +260,14 @@ header {
 	height: 102px;
 }
 
+.main-footer:has(#selection-bar.visible) {
+	height: 102px;
+}
+
+.main-footer:has(#toast-container .toast-item):has(#selection-bar.visible) {
+	height: 140px;
+}
+
 .footer-main {
 	display: flex;
 	align-items: stretch;

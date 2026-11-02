@@ -303,6 +303,98 @@ function applyVisibleActionOrder(previousActions: MacroUiAction[]) {
     void persistActionOrder(visibleOrder, previousActions);
 }
 
+function updateSelectionBar() {
+    const bar = document.getElementById("selection-bar");
+    const text = document.getElementById("selection-bar-text");
+    const copy = document.getElementById("selection-bar-copy") as HTMLButtonElement | null;
+    const paste = document.getElementById("selection-bar-paste") as HTMLButtonElement | null;
+    const duplicate = document.getElementById("selection-bar-duplicate") as HTMLButtonElement | null;
+    const up = document.getElementById("selection-bar-up") as HTMLButtonElement | null;
+    const down = document.getElementById("selection-bar-down") as HTMLButtonElement | null;
+    const remove = document.getElementById("selection-bar-delete") as HTMLButtonElement | null;
+    const cancel = document.getElementById("selection-bar-cancel") as HTMLButtonElement | null;
+    if (!bar || !text || !copy || !paste || !duplicate || !up || !down || !remove || !cancel) return;
+
+    const setCancelMode = (clipboard: boolean) => {
+        const key = clipboard ? "macro.clear" : "macro.cancel";
+        const label = clipboard ? t("macro.clear", "Clear") : t("macro.cancel", "CANCEL");
+        cancel.innerHTML = `<span class="icon">${clipboard ? "&#57742;" : "&#57778;"}</span>`;
+        cancel.dataset.i18nTitle = key;
+        cancel.title = label;
+        cancel.setAttribute("aria-label", label);
+    };
+
+    const count = selectedActionIds.size;
+    if (count > 0) {
+        bar.classList.add("visible");
+        text.textContent = t("macro.selection_count", "Selected actions: {count}", {
+            count: String(count),
+        });
+        copy.hidden = false;
+        paste.hidden = copiedActionJsons.length === 0;
+        duplicate.hidden = false;
+        up.hidden = false;
+        down.hidden = false;
+        remove.hidden = false;
+
+        const ordered = orderedActionIds();
+        const selected = ordered.filter((id) => selectedActionIds.has(id));
+        up.disabled = ordered.indexOf(selected[0]) <= 0;
+        down.disabled = ordered.indexOf(selected[selected.length - 1]) >= ordered.length - 1;
+        setCancelMode(false);
+        return;
+    }
+
+    if (copiedActionJsons.length > 0) {
+        bar.classList.add("visible");
+        text.textContent = t("macro.clipboard_count", "In clipboard: {count}", {
+            count: String(copiedActionJsons.length),
+        });
+        copy.hidden = true;
+        paste.hidden = false;
+        duplicate.hidden = true;
+        up.hidden = true;
+        down.hidden = true;
+        remove.hidden = true;
+        setCancelMode(true);
+        return;
+    }
+
+    bar.classList.remove("visible");
+}
+
+function initSelectionBar() {
+    document
+        .getElementById("selection-bar-copy")
+        ?.addEventListener("click", () => void copySelectedActions());
+    document
+        .getElementById("selection-bar-paste")
+        ?.addEventListener("click", () => void pasteCopiedActions());
+    document
+        .getElementById("selection-bar-duplicate")
+        ?.addEventListener("click", () => void duplicateActions(selectionInListOrder()));
+    document
+        .getElementById("selection-bar-up")
+        ?.addEventListener("click", () => moveSelectedActions(-1));
+    document
+        .getElementById("selection-bar-down")
+        ?.addEventListener("click", () => moveSelectedActions(1));
+    document
+        .getElementById("selection-bar-delete")
+        ?.addEventListener("click", () => void removeActions(selectionInListOrder()));
+
+    document.getElementById("selection-bar-cancel")?.addEventListener("click", () => {
+        if (selectedActionIds.size > 0) {
+            clearSelection();
+            return;
+        }
+        copiedActionJsons = [];
+        updateSelectionBar();
+    });
+
+    updateSelectionBar();
+}
+
 function updateSelectionClasses() {
     getActionItems().forEach((item) => {
         const id = getActionIdFromElement(item);
@@ -316,12 +408,14 @@ function setSelection(ids: number[], anchorId: number | null = null) {
     selectedActionIds = new Set(ids);
     selectionAnchorId = anchorId;
     updateSelectionClasses();
+    updateSelectionBar();
 }
 
 function clearSelection() {
     selectedActionIds.clear();
     selectionAnchorId = null;
     updateSelectionClasses();
+    updateSelectionBar();
 }
 
 function orderedActionIds(): number[] {
@@ -378,6 +472,7 @@ async function removeActions(actionIds: number[]) {
         if (selectionAnchorId !== null && removed.has(selectionAnchorId)) {
             selectionAnchorId = null;
         }
+        updateSelectionBar();
         renderActions({ animateReorder: true });
     } catch (error) {
         console.error("Failed to remove macro actions", error);
@@ -408,10 +503,14 @@ async function copySelectedActions() {
     if (ids.length === 0) return;
 
     try {
-        copiedActionJsons = await invoke<string[]>("export_macro_actions", {
+        const exported = await invoke<string[]>("export_macro_actions", {
             actionIds: ids,
             action_ids: ids,
         });
+        if (exported.length > 0) {
+            copiedActionJsons = exported;
+            updateSelectionBar();
+        }
     } catch (error) {
         console.error("Failed to copy macro actions", error);
     }
@@ -482,15 +581,7 @@ function moveSelectedActions(delta: number) {
 }
 
 export function initMacroEditorShortcuts() {
-    document.addEventListener("click", (event) => {
-        const target = event.target as HTMLElement | null;
-        if (target?.closest(".macro-action-item")) {
-            return;
-        }
-        if (selectedActionIds.size > 0) {
-            clearSelection();
-        }
-    });
+    initSelectionBar();
 
     window.addEventListener("keydown", (event) => {
         const target = event.target as HTMLElement | null;
@@ -751,6 +842,8 @@ export function renderActions(options: { animateNew?: boolean; animateReorder?: 
     ) {
         selectionAnchorId = null;
     }
+
+    updateSelectionBar();
 
     if (macroState.actions.length === 0) {
         listContainer.innerHTML = `
