@@ -1885,6 +1885,36 @@ pub async fn toggle_macro_player(
 }
 
 #[tauri::command]
+pub async fn play_macro_actions(
+    state: State<'_, Arc<AppState>>,
+    app: AppHandle,
+    action_ids: Vec<u64>,
+) -> Result<(), String> {
+    if action_ids.is_empty() {
+        return Err("Select at least one macro action.".to_string());
+    }
+
+    let ids: HashSet<u64> = action_ids.into_iter().collect();
+    let actions: Vec<MacroAction> = state
+        .macro_engine
+        .actions
+        .lock()
+        .await
+        .iter()
+        .filter(|action| ids.contains(&action.id))
+        .cloned()
+        .collect();
+
+    crate::engine::macro_engine::playback::start_actions_playback(
+        &state.macro_engine,
+        app,
+        actions,
+        MacroRepeatMode::FiniteTimes { count: 1 },
+    )
+    .await
+}
+
+#[tauri::command]
 pub async fn set_macro_repeat_mode(
     state: State<'_, Arc<AppState>>,
     mode: String,

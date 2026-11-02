@@ -5,6 +5,7 @@ import { macroState } from "./state";
 import type { MacroBackendAction, MacroUiAction } from "./types";
 import { formatDuration } from "../utils";
 import { t } from "../i18n";
+import { notify } from "../notifications";
 
 export function getMacroDurationMs(actions: MacroBackendAction[]): number {
     let totalMs = 0;
@@ -314,6 +315,7 @@ function updateSelectionBar() {
     }
 
     const text = document.getElementById("selection-bar-text");
+    const play = document.getElementById("selection-bar-play") as HTMLButtonElement | null;
     const copy = document.getElementById("selection-bar-copy") as HTMLButtonElement | null;
     const paste = document.getElementById("selection-bar-paste") as HTMLButtonElement | null;
     const duplicate = document.getElementById("selection-bar-duplicate") as HTMLButtonElement | null;
@@ -321,7 +323,7 @@ function updateSelectionBar() {
     const down = document.getElementById("selection-bar-down") as HTMLButtonElement | null;
     const remove = document.getElementById("selection-bar-delete") as HTMLButtonElement | null;
     const cancel = document.getElementById("selection-bar-cancel") as HTMLButtonElement | null;
-    if (!bar || !text || !copy || !paste || !duplicate || !up || !down || !remove || !cancel) return;
+    if (!bar || !text || !play || !copy || !paste || !duplicate || !up || !down || !remove || !cancel) return;
 
     const setCancelMode = (clipboard: boolean) => {
         const key = clipboard ? "macro.clear" : "macro.cancel";
@@ -338,6 +340,7 @@ function updateSelectionBar() {
         text.textContent = t("macro.selection_count", "Selected actions: {count}", {
             count: String(count),
         });
+        play.hidden = false;
         copy.hidden = false;
         paste.hidden = copiedActionJsons.length === 0;
         duplicate.hidden = false;
@@ -358,6 +361,7 @@ function updateSelectionBar() {
         text.textContent = t("macro.clipboard_count", "In clipboard: {count}", {
             count: String(copiedActionJsons.length),
         });
+        play.hidden = true;
         copy.hidden = true;
         paste.hidden = false;
         duplicate.hidden = true;
@@ -372,6 +376,19 @@ function updateSelectionBar() {
 }
 
 function initSelectionBar() {
+    document.getElementById("selection-bar-play")?.addEventListener("click", () => {
+        const ids = selectionInListOrder();
+        if (ids.length === 0) return;
+
+        void invoke("play_macro_actions", {
+            actionIds: ids,
+            action_ids: ids,
+        }).catch((error) => {
+            console.error("Failed to play selected macro actions", error);
+            notify(error instanceof Error ? error.message : String(error), "error", 3200);
+        });
+    });
+
     document
         .getElementById("selection-bar-copy")
         ?.addEventListener("click", () => void copySelectedActions());

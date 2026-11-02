@@ -997,8 +997,17 @@ pub async fn start_playback(
     state: &MacroEngineState,
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
-    let actions = state.actions.lock().await;
+    let actions = state.actions.lock().await.clone();
+    let repeat_mode = state.repeat_mode.lock().await.clone();
+    start_actions_playback(state, app_handle, actions, repeat_mode).await
+}
 
+pub async fn start_actions_playback(
+    state: &MacroEngineState,
+    app_handle: tauri::AppHandle,
+    actions: Vec<MacroAction>,
+    repeat_mode: super::types::MacroRepeatMode,
+) -> Result<(), String> {
     if actions.is_empty() {
         let _ = app_handle.emit(
             "macro-status-changed",
@@ -1044,25 +1053,14 @@ pub async fn start_playback(
         }),
     );
 
-    let actions_clone = actions.clone();
-    let repeat_mode = state.repeat_mode.lock().await.clone();
     let cancel_flag = state.cancel_playback.clone();
-
-    drop(actions);
 
     tokio::spawn({
         let state = state.clone();
         let app_handle = app_handle.clone();
         let repeat_mode = repeat_mode.clone();
         async move {
-            playback_loop(
-                &actions_clone,
-                &repeat_mode,
-                cancel_flag,
-                &state,
-                app_handle,
-            )
-            .await;
+            playback_loop(&actions, &repeat_mode, cancel_flag, &state, app_handle).await;
         }
     });
 

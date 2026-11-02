@@ -39,6 +39,7 @@
     "macro.record": "録画",
     "macro.filters": "フィルター",
     "macro.clear": "クリア",
+    "macro.play_selected": "選択項目を再生",
     "macro.selection_count": "選択中のアクション: {count}",
     "macro.selection_copy": "コピー",
     "macro.clipboard_count": "クリップボード: {count}",

@@ -925,6 +925,7 @@ pub fn run() {
             reorder_macro_actions,
             clear_macros,
             toggle_macro_player,
+            play_macro_actions,
             set_macro_repeat_mode,
             set_macro_repeat_count,
             set_macro_repeat_duration,

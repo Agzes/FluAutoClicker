@@ -39,6 +39,7 @@
     "macro.record": "녹화",
     "macro.filters": "필터",
     "macro.clear": "지우기",
+    "macro.play_selected": "선택 항목 실행",
     "macro.selection_count": "선택한 동작: {count}",
     "macro.selection_copy": "복사",
     "macro.clipboard_count": "클립보드: {count}",

@@ -39,6 +39,7 @@
     "macro.record": "Record",
     "macro.filters": "Filters",
     "macro.clear": "Clear",
+    "macro.play_selected": "Play selected",
     "macro.selection_count": "Selected actions: {count}",
     "macro.selection_copy": "Copy",
     "macro.clipboard_count": "In clipboard: {count}",

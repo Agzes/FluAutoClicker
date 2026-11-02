@@ -39,6 +39,7 @@
     "macro.record": "Gravar",
     "macro.filters": "Filtros",
     "macro.clear": "Limpar",
+    "macro.play_selected": "Reproduzir seleção",
     "macro.selection_count": "Ações selecionadas: {count}",
     "macro.selection_copy": "Copiar",
     "macro.clipboard_count": "Na área de transferência: {count}",

@@ -39,6 +39,7 @@
     "macro.record": "Enregistrer",
     "macro.filters": "Filtres",
     "macro.clear": "Effacer",
+    "macro.play_selected": "Lire la sélection",
     "macro.selection_count": "Actions sélectionnées : {count}",
     "macro.selection_copy": "Copier",
     "macro.clipboard_count": "Dans le presse-papiers : {count}",

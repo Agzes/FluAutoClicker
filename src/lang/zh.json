@@ -39,6 +39,7 @@
     "macro.record": "录制",
     "macro.filters": "过滤器",
     "macro.clear": "清空",
+    "macro.play_selected": "播放所选",
     "macro.selection_count": "已选择动作：{count}",
     "macro.selection_copy": "复制",
     "macro.clipboard_count": "剪贴板中：{count}",

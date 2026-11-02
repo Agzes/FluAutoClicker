@@ -39,6 +39,7 @@
     "macro.record": "Aufnahme",
     "macro.filters": "Filter",
     "macro.clear": "Leeren",
+    "macro.play_selected": "Auswahl abspielen",
     "macro.selection_count": "Ausgewählte Aktionen: {count}",
     "macro.selection_copy": "Kopieren",
     "macro.clipboard_count": "In der Zwischenablage: {count}",

@@ -39,6 +39,7 @@
     "macro.record": "Запись",
     "macro.filters": "Фильтры",
     "macro.clear": "Очистить",
+    "macro.play_selected": "Запустить выбранное",
     "macro.selection_count": "Выбрано действий: {count}",
     "macro.selection_copy": "Копировать",
     "macro.clipboard_count": "В буфере: {count}",
