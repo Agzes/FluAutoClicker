@@ -358,6 +358,11 @@ export function initDrawer() {
         "https://github.com/Agzes/FluAutoClicker",
         "GitHub",
     );
+    bindHelpLink(
+        "help-donate-link",
+        "https://agzes.github.io/donate",
+        "Donate",
+    );
     document
         .getElementById("help-licenses-link")
         ?.addEventListener("click", () =>

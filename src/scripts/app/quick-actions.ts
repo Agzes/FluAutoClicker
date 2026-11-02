@@ -156,9 +156,9 @@ export function initDrawerLaunchers() {
         openDrawer("section-jiggler", t("jiggler.drawer_title", "Mouse Jiggler"), "&#57987;");
     });
 
-    document.getElementById("github-btn")?.addEventListener("click", () => {
-        void openUrl("https://github.com/Agzes/FluAutoClicker").catch((error) => {
-            notify(error instanceof Error ? error.message : t("error.could_not_open_github", "Could not open GitHub"), "error", 3200);
+    document.getElementById("donate-btn")?.addEventListener("click", () => {
+        void openUrl("https://agzes.github.io/donate").catch((error) => {
+            notify(error instanceof Error ? error.message : t("error.could_not_open_donate", "Could not open Donate"), "error", 3200);
         });
     });
 }
