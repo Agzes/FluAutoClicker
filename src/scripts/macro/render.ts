@@ -305,6 +305,14 @@ function applyVisibleActionOrder(previousActions: MacroUiAction[]) {
 
 function updateSelectionBar() {
     const bar = document.getElementById("selection-bar");
+    if (!bar) return;
+
+    const activeMode = document.querySelector<HTMLElement>(".mode-tabs .tab.active")?.dataset.tab;
+    if (activeMode !== "macro") {
+        bar.classList.remove("visible");
+        return;
+    }
+
     const text = document.getElementById("selection-bar-text");
     const copy = document.getElementById("selection-bar-copy") as HTMLButtonElement | null;
     const paste = document.getElementById("selection-bar-paste") as HTMLButtonElement | null;
@@ -392,6 +400,7 @@ function initSelectionBar() {
         updateSelectionBar();
     });
 
+    window.addEventListener("flu:mode-changed", updateSelectionBar);
     updateSelectionBar();
 }
 

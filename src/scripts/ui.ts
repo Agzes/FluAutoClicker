@@ -68,6 +68,8 @@ export function setSelectedMode(mode: AppMode) {
     if (typeof updateCPSFn === "function") {
         updateCPSFn();
     }
+
+    window.dispatchEvent(new CustomEvent("flu:mode-changed", { detail: mode }));
 }
 
 export function initInputs() {
