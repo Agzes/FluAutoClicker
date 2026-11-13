@@ -1,0 +1,1444 @@
+<!doctype html>
+<html lang="en" class="no-js">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>FluAutoClicker</title>
+        <meta
+            name="description"
+            content="Mouse, keyboard & macro automation for Windows and Linux."
+        />
+        <meta name="theme-color" content="#87CEFA" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="FluAutoClicker" />
+        <meta property="og:title" content="FluAutoClicker" />
+        <meta
+            property="og:description"
+            content="Mouse, keyboard & macro automation for Windows and Linux."
+        />
+        <meta property="og:image" content="assets/preview.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="FluAutoClicker" />
+        <meta
+            name="twitter:description"
+            content="Mouse, keyboard & macro automation for Windows and Linux."
+        />
+        <meta name="twitter:image" content="assets/preview.png" />
+        <link rel="icon" type="image/png" href="assets/icon.png" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Geologica:wght@300;400;500;600;700;900&family=MuseoModerno:wght@400;600;700;900&display=swap"
+        />
+        <link rel="stylesheet" href="styles.css" />
+        <script>
+            document.documentElement.classList.remove("no-js");
+        </script>
+    </head>
+    <body>
+        <header class="site-header">
+            <div class="site-header-inner">
+                <div class="header-brand-wrap">
+                    <div class="title-group">
+                        <span class="app-name font-logo">
+                            <span class="brand-flu">Flu</span
+                            ><span class="brand-rest">AutoClicker</span>
+                        </span>
+                    </div>
+                    <a
+                        href="https://github.com/Agzes/FluAutoClicker/releases/tag/v0.1.0-beta.9"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="header-version"
+                        title="View release on GitHub"
+                    >
+                        v0.1.0-beta.9
+                    </a>
+                </div>
+
+                <nav
+                    class="mode-tabs site-nav"
+                    id="site-nav"
+                    aria-label="View switch"
+                >
+                    <button
+                        type="button"
+                        class="tab active"
+                        data-view="overview"
+                        data-i18n="nav.overview"
+                    >
+                        Overview
+                    </button>
+                    <button
+                        type="button"
+                        class="tab"
+                        data-view="features"
+                        data-i18n="nav.features"
+                    >
+                        Features
+                    </button>
+                </nav>
+
+                <noscript class="nojs-header-wrap">
+                    <span class="nojs-header-badge">No-JS Mode</span>
+                </noscript>
+
+                <div class="header-actions">
+                    <div
+                        class="accent-dots"
+                        title="Accent color"
+                        aria-label="Accent color presets"
+                    >
+                        <button
+                            type="button"
+                            class="accent-dot active"
+                            data-accent="#87CEFA"
+                            data-dim="#4F7891"
+                            title="Flu"
+                            style="--dot: #87cefa"
+                            aria-label="Flu"
+                        ></button>
+                        <button
+                            type="button"
+                            class="accent-dot"
+                            data-accent="#FFC799"
+                            data-dim="#99775C"
+                            title="Vesper"
+                            style="--dot: #ffc799"
+                            aria-label="Vesper"
+                        ></button>
+                        <button
+                            type="button"
+                            class="accent-dot"
+                            data-accent="#A78BFA"
+                            data-dim="#625196"
+                            title="Violet"
+                            style="--dot: #a78bfa"
+                            aria-label="Violet"
+                        ></button>
+                        <button
+                            type="button"
+                            class="accent-dot"
+                            data-accent="#34D399"
+                            data-dim="#1F7D5B"
+                            title="Mint"
+                            style="--dot: #34d399"
+                            aria-label="Mint"
+                        ></button>
+                        <button
+                            type="button"
+                            class="accent-dot"
+                            data-accent="#FB7185"
+                            data-dim="#96434F"
+                            title="Rose"
+                            style="--dot: #fb7185"
+                            aria-label="Rose"
+                        ></button>
+                    </div>
+
+                    <button
+                        type="button"
+                        id="lang-trigger-btn"
+                        class="header-link-btn lang-trigger-btn"
+                        aria-label="Language"
+                        aria-haspopup="dialog"
+                    >
+                        <span class="icon" aria-hidden="true">&#57598;</span>
+                        <span id="lang-current-code">EN</span>
+                    </button>
+
+                    <a
+                        href="https://github.com/Agzes/FluAutoClicker"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="header-link-btn"
+                    >
+                        <svg
+                            class="brand-svg"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"
+                            />
+                        </svg>
+                        <span>GitHub</span>
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <main class="page-main">
+            <section class="page-view active" id="view-overview">
+                <div class="hero-section">
+                    <div class="hero-copy">
+                        <h1 class="hero-title font-logo">
+                            <span class="brand-flu">Flu</span
+                            ><span class="brand-rest">AutoClicker</span>
+                        </h1>
+
+                        <p class="hero-subtitle" data-i18n="hero.subtitle">
+                            Mouse, keyboard &amp; macro automation for Windows
+                            and Linux.
+                        </p>
+
+                        <div class="section-row unified-action-card">
+                            <div class="hero-cta-row">
+                                <a
+                                    href="https://github.com/Agzes/FluAutoClicker/releases/latest"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="download-btn"
+                                >
+                                    <span data-i18n="hero.download"
+                                        >Download</span
+                                    >
+                                    <span class="download-ver"
+                                        >v0.1.0-beta.9</span
+                                    >
+                                </a>
+                                <a
+                                    href="https://github.com/Agzes/FluAutoClicker"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="ghost-btn"
+                                >
+                                    <svg
+                                        class="brand-svg"
+                                        width="14"
+                                        height="14"
+                                        viewBox="0 0 24 24"
+                                        fill="currentColor"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"
+                                        />
+                                    </svg>
+                                    <span>GitHub</span>
+                                </a>
+                                <a
+                                    href="https://agzes.github.io/go/to/discord"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="ghost-btn"
+                                >
+                                    <svg
+                                        class="discord-svg"
+                                        width="14"
+                                        height="14"
+                                        viewBox="0 0 24 24"
+                                        fill="currentColor"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028ZM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418Zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418Z"
+                                        />
+                                    </svg>
+                                    <span>Discord</span>
+                                </a>
+                            </div>
+
+                            <div class="downloads-list">
+                                <a
+                                    href="https://github.com/Agzes/FluAutoClicker/releases/latest"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="dl-row"
+                                >
+                                    <span data-i18n="hero.win"
+                                        >Windows x64</span
+                                    >
+                                    <span class="dl-ext">.exe</span>
+                                </a>
+                                <a
+                                    href="https://github.com/Agzes/FluAutoClicker/releases/latest"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="dl-row"
+                                >
+                                    <span data-i18n="hero.linux"
+                                        >Linux x64</span
+                                    >
+                                    <span class="dl-ext"
+                                        >AppImage · deb · rpm</span
+                                    >
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <template id="hero-preview-template">
+                        <div
+                            class="app-window"
+                            id="app-window"
+                            role="region"
+                            aria-label="FluAutoClicker interface"
+                        >
+                            <div class="app-header">
+                                <div class="title-group">
+                                    <span class="app-name font-logo">
+                                        <span class="brand-flu">Flu</span
+                                        ><span class="brand-rest"
+                                            >AutoClicker</span
+                                        >
+                                    </span>
+                                </div>
+
+                                <nav class="mode-tabs" id="app-mode-tabs">
+                                    <button
+                                        type="button"
+                                        class="tab active"
+                                        data-tab="mouse"
+                                        data-i18n="app.tab.mouse"
+                                    >
+                                        Mouse
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="tab"
+                                        data-tab="keyboard"
+                                        data-i18n="app.tab.keyboard"
+                                        title="Available in desktop app"
+                                    >
+                                        Keyboard
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="tab"
+                                        data-tab="macro"
+                                        data-i18n="app.tab.macro"
+                                        title="Available in desktop app"
+                                    >
+                                        Macro
+                                    </button>
+                                </nav>
+
+                                <div class="window-controls">
+                                    <button
+                                        type="button"
+                                        class="control-btn"
+                                        title="Minimize"
+                                    >
+                                        <span
+                                            class="window-control-glyph"
+                                            aria-hidden="true"
+                                            >&#57627;</span
+                                        >
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="control-btn"
+                                        title="Maximize"
+                                    >
+                                        <span
+                                            class="window-control-glyph"
+                                            aria-hidden="true"
+                                            >&#57618;</span
+                                        >
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="control-btn close"
+                                        title="Close"
+                                    >
+                                        <svg
+                                            width="14"
+                                            height="14"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2.2"
+                                            stroke-linecap="round"
+                                        >
+                                            <line
+                                                x1="18"
+                                                y1="6"
+                                                x2="6"
+                                                y2="18"
+                                            ></line>
+                                            <line
+                                                x1="6"
+                                                y1="6"
+                                                x2="18"
+                                                y2="18"
+                                            ></line>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="app-body">
+                                <div class="app-content" id="app-content">
+                                    <section
+                                        id="tab-mouse"
+                                        class="content-section active"
+                                    >
+                                        <div class="section-row">
+                                            <div class="time-inputs-row">
+                                                <div class="time-input-box">
+                                                    <div
+                                                        class="time-input-wrap"
+                                                    >
+                                                        <input
+                                                            type="number"
+                                                            value="0"
+                                                            id="mouse-hours"
+                                                            min="0"
+                                                            max="99"
+                                                            aria-label="Mouse hours"
+                                                        />
+                                                    </div>
+                                                    <span
+                                                        class="time-label"
+                                                        data-i18n="app.time.hours"
+                                                        >hours</span
+                                                    >
+                                                </div>
+                                                <div class="time-input-box">
+                                                    <div
+                                                        class="time-input-wrap"
+                                                    >
+                                                        <input
+                                                            type="number"
+                                                            value="0"
+                                                            id="mouse-minutes"
+                                                            min="0"
+                                                            max="59"
+                                                            aria-label="Mouse minutes"
+                                                        />
+                                                    </div>
+                                                    <span
+                                                        class="time-label"
+                                                        data-i18n="app.time.minutes"
+                                                        >minutes</span
+                                                    >
+                                                </div>
+                                                <div class="time-input-box">
+                                                    <div
+                                                        class="time-input-wrap"
+                                                    >
+                                                        <input
+                                                            type="number"
+                                                            value="0"
+                                                            id="mouse-seconds"
+                                                            min="0"
+                                                            max="59"
+                                                            aria-label="Mouse seconds"
+                                                        />
+                                                    </div>
+                                                    <span
+                                                        class="time-label"
+                                                        data-i18n="app.time.seconds"
+                                                        >seconds</span
+                                                    >
+                                                </div>
+                                                <div class="time-input-box">
+                                                    <div
+                                                        class="time-input-wrap"
+                                                    >
+                                                        <input
+                                                            type="number"
+                                                            value="550"
+                                                            id="mouse-ms"
+                                                            min="0"
+                                                            max="999"
+                                                            aria-label="Mouse milliseconds"
+                                                        />
+                                                    </div>
+                                                    <span
+                                                        class="time-label"
+                                                        data-i18n="app.time.ms"
+                                                        >milliseconds</span
+                                                    >
+                                                </div>
+                                                <div class="time-input-box">
+                                                    <div
+                                                        class="time-input-wrap"
+                                                    >
+                                                        <span
+                                                            class="variation-tilde"
+                                                            >~</span
+                                                        >
+                                                        <input
+                                                            type="number"
+                                                            value="0"
+                                                            id="mouse-variation"
+                                                            min="0"
+                                                            max="999"
+                                                            class="variation-input-value"
+                                                            aria-label="Mouse random variation ms"
+                                                        />
+                                                    </div>
+                                                    <span
+                                                        class="time-label"
+                                                        data-i18n="app.time.random"
+                                                        >random (ms)</span
+                                                    >
+                                                </div>
+                                            </div>
+                                            <div class="slider-row">
+                                                <input
+                                                    type="range"
+                                                    class="interval-slider"
+                                                    id="mouse-slider"
+                                                    min="1"
+                                                    max="1000"
+                                                    value="550"
+                                                    aria-label="Mouse interval slider"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div class="section-row">
+                                            <div
+                                                class="toggle-row"
+                                                id="press-hold-toggle"
+                                            >
+                                                <button
+                                                    type="button"
+                                                    class="toggle-option active"
+                                                    data-value="press"
+                                                    data-i18n="app.press"
+                                                >
+                                                    Press
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="toggle-option"
+                                                    data-value="hold"
+                                                    data-i18n="app.hold"
+                                                >
+                                                    Hold
+                                                </button>
+                                            </div>
+                                            <div
+                                                class="expandable-content"
+                                                id="mouse-hold-duration-section"
+                                            >
+                                                <div class="expandable-inner">
+                                                    <div
+                                                        class="finite-inputs-row"
+                                                    >
+                                                        <div
+                                                            class="coord-input-box"
+                                                            style="flex: 2"
+                                                        >
+                                                            <input
+                                                                type="number"
+                                                                value="100"
+                                                                id="mouse-hold-duration"
+                                                                min="1"
+                                                                aria-label="Hold duration"
+                                                            />
+                                                        </div>
+                                                        <div
+                                                            class="toggle-row"
+                                                            id="mouse-hold-mode-toggle"
+                                                            style="flex: 3"
+                                                        >
+                                                            <button
+                                                                type="button"
+                                                                class="toggle-option active"
+                                                                data-value="ms"
+                                                                data-i18n="app.unit.ms"
+                                                            >
+                                                                Milliseconds
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                class="toggle-option"
+                                                                data-value="s"
+                                                                data-i18n="app.unit.s"
+                                                            >
+                                                                Seconds
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="section-row">
+                                            <div
+                                                class="toggle-row"
+                                                id="mouse-click-type-toggle"
+                                            >
+                                                <button
+                                                    type="button"
+                                                    class="toggle-option active"
+                                                    data-value="single"
+                                                    data-i18n="app.single"
+                                                >
+                                                    Single
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="toggle-option"
+                                                    data-value="double"
+                                                    data-i18n="app.double"
+                                                >
+                                                    Double
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="toggle-option"
+                                                    data-value="triple"
+                                                    data-i18n="app.triple"
+                                                >
+                                                    Triple
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div class="section-row">
+                                            <div
+                                                class="multi-button-row"
+                                                id="mouse-button-toggle"
+                                            >
+                                                <button
+                                                    type="button"
+                                                    class="multi-btn active"
+                                                    data-value="left"
+                                                    data-i18n="app.left"
+                                                >
+                                                    Left
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="multi-btn"
+                                                    data-value="middle"
+                                                    data-i18n="app.middle"
+                                                >
+                                                    Middle
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="multi-btn"
+                                                    data-value="right"
+                                                    data-i18n="app.right"
+                                                >
+                                                    Right
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="multi-btn"
+                                                    data-value="front"
+                                                >
+                                                    X1
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="multi-btn"
+                                                    data-value="back"
+                                                >
+                                                    X2
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div class="section-row">
+                                            <div
+                                                class="toggle-row"
+                                                id="repeat-toggle"
+                                            >
+                                                <button
+                                                    type="button"
+                                                    class="toggle-option active"
+                                                    data-value="infinite"
+                                                    data-i18n="app.repeat.inf"
+                                                >
+                                                    Repeat ∞ times
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="toggle-option"
+                                                    data-value="finite"
+                                                    data-i18n="app.repeat.fin"
+                                                >
+                                                    Repeat for times / seconds
+                                                </button>
+                                            </div>
+                                            <div
+                                                class="expandable-content"
+                                                id="mouse-repeat-finite-section"
+                                            >
+                                                <div class="expandable-inner">
+                                                    <div
+                                                        class="finite-inputs-row"
+                                                    >
+                                                        <div
+                                                            class="coord-input-box"
+                                                            style="flex: 2"
+                                                        >
+                                                            <input
+                                                                type="number"
+                                                                value="10"
+                                                                id="mouse-repeat-count"
+                                                                min="1"
+                                                                aria-label="Repeat count"
+                                                            />
+                                                        </div>
+                                                        <div
+                                                            class="toggle-row"
+                                                            id="finite-mode-toggle"
+                                                            style="flex: 3"
+                                                        >
+                                                            <button
+                                                                type="button"
+                                                                class="toggle-option active"
+                                                                data-value="times"
+                                                                data-i18n="app.times"
+                                                            >
+                                                                Times
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                class="toggle-option"
+                                                                data-value="seconds"
+                                                                data-i18n="app.unit.s"
+                                                            >
+                                                                Seconds
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="section-row">
+                                            <div
+                                                class="toggle-row"
+                                                id="position-toggle"
+                                            >
+                                                <button
+                                                    type="button"
+                                                    class="toggle-option active"
+                                                    data-value="current"
+                                                    data-i18n="app.pos.current"
+                                                >
+                                                    Current position
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="toggle-option"
+                                                    data-value="custom"
+                                                    data-i18n="app.pos.custom"
+                                                >
+                                                    Choose a place
+                                                </button>
+                                            </div>
+                                            <div
+                                                class="expandable-content"
+                                                id="mouse-coord-section"
+                                            >
+                                                <div class="expandable-inner">
+                                                    <div
+                                                        class="coord-row-inner"
+                                                    >
+                                                        <div
+                                                            class="coord-input-box"
+                                                        >
+                                                            <input
+                                                                type="number"
+                                                                value="841"
+                                                                id="coord-x"
+                                                                min="0"
+                                                                aria-label="Coordinate X"
+                                                            />
+                                                        </div>
+                                                        <div
+                                                            class="coord-input-box"
+                                                        >
+                                                            <input
+                                                                type="number"
+                                                                value="425"
+                                                                id="coord-y"
+                                                                min="0"
+                                                                aria-label="Coordinate Y"
+                                                            />
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            class="pick-btn"
+                                                            id="pick-btn"
+                                                        >
+                                                            <span
+                                                                class="icon"
+                                                                style="
+                                                                    margin-right: 6px;
+                                                                    font-size: 14px;
+                                                                "
+                                                                >&#58633;</span
+                                                            >
+                                                            <span
+                                                                data-i18n="app.pick"
+                                                                >PICK</span
+                                                            >
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div
+                                            class="section-row mouse-bottom-bar"
+                                        >
+                                            <div class="feature-buttons-row">
+                                                <button
+                                                    type="button"
+                                                    class="feature-btn"
+                                                    id="jiggler-quick-btn"
+                                                >
+                                                    <span class="icon"
+                                                        >&#57987;</span
+                                                    >
+                                                    <span
+                                                        data-i18n="app.jiggler"
+                                                        >Mouse Jiggler</span
+                                                    >
+                                                </button>
+                                                <a
+                                                    href="https://github.com/Agzes/FluAutoClicker"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    class="feature-btn"
+                                                >
+                                                    <span class="icon"
+                                                        >&#58378;</span
+                                                    >
+                                                    <span>GitHub</span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </section>
+                                </div>
+                            </div>
+
+                            <div class="main-footer">
+                                <div class="footer-main">
+                                    <div class="footer-left">
+                                        <button
+                                            type="button"
+                                            class="footer-btn"
+                                            data-drawer="settings"
+                                            title="Settings"
+                                        >
+                                            <span class="icon">&#xe154;</span>
+                                            <span
+                                                class="footer-label"
+                                                data-i18n="app.footer.settings"
+                                                >SETTINGS</span
+                                            >
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="footer-btn"
+                                            data-drawer="hotkeys"
+                                            title="HotKeys"
+                                        >
+                                            <span class="icon">&#xe284;</span>
+                                            <span
+                                                class="footer-label"
+                                                data-i18n="app.footer.hotkeys"
+                                                >HOTKEYS</span
+                                            >
+                                        </button>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        class="main-action-btn"
+                                        id="app-start-btn"
+                                    >
+                                        <span class="start-hotkey">F6</span>
+                                        <span
+                                            class="start-label"
+                                            id="app-start-label"
+                                            >START</span
+                                        >
+                                        <span
+                                            class="start-cps"
+                                            id="app-start-cps"
+                                            >~ 1.8 CPS</span
+                                        >
+                                    </button>
+
+                                    <div class="footer-right">
+                                        <button
+                                            type="button"
+                                            class="footer-btn"
+                                            data-drawer="profiles"
+                                            title="Profiles"
+                                        >
+                                            <span class="icon">&#xe36b;</span>
+                                            <span
+                                                class="footer-label"
+                                                data-i18n="app.footer.profiles"
+                                                >PROFILES</span
+                                            >
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="footer-btn"
+                                            data-drawer="help"
+                                            title="Help"
+                                        >
+                                            <span class="icon">&#xe47b;</span>
+                                            <span
+                                                class="footer-label"
+                                                data-i18n="app.footer.help"
+                                                >HELP</span
+                                            >
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div
+                                class="drawer-overlay"
+                                id="drawer-overlay"
+                            ></div>
+                            <div
+                                class="drawer-shell"
+                                id="drawer-shell"
+                                aria-hidden="true"
+                            >
+                                <div
+                                    class="drawer-drag-handle"
+                                    id="drawer-drag-handle"
+                                    title="Drag to resize"
+                                >
+                                    <div class="drawer-drag-bar"></div>
+                                </div>
+                                <div class="drawer-content-wrap">
+                                    <div class="drawer-header">
+                                        <div class="drawer-header-left">
+                                            <span class="icon" id="drawer-icon"
+                                                >&#xe154;</span
+                                            >
+                                        </div>
+                                        <div
+                                            class="drawer-header-title"
+                                            id="drawer-title"
+                                        >
+                                            Settings
+                                        </div>
+                                        <button
+                                            type="button"
+                                            class="drawer-close-btn"
+                                            id="drawer-close-btn"
+                                            title="Close drawer"
+                                        >
+                                            <svg
+                                                width="12"
+                                                height="12"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2.4"
+                                                stroke-linecap="round"
+                                            >
+                                                <line
+                                                    x1="18"
+                                                    y1="6"
+                                                    x2="6"
+                                                    y2="18"
+                                                ></line>
+                                                <line
+                                                    x1="6"
+                                                    y1="6"
+                                                    x2="18"
+                                                    y2="18"
+                                                ></line>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div
+                                        class="drawer-body"
+                                        id="drawer-body"
+                                    ></div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </section>
+
+            <section class="page-view" id="view-features">
+                <div class="features-grid">
+                    <div class="section-row feature-card">
+                        <div class="feature-card-inner">
+                            <div class="feature-card-head">
+                                <span class="icon">&#57987;</span>
+                                <h3>Mouse Mode</h3>
+                            </div>
+                            <p>
+                                Left, Middle, Right, X1 &amp; X2 buttons with
+                                instant or timed intervals.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="section-row feature-card">
+                        <div class="feature-card-inner">
+                            <div class="feature-card-head">
+                                <span class="icon">&#57987;</span>
+                                <h3>Click Multipliers</h3>
+                            </div>
+                            <p>
+                                Switch between Single, Double and Triple click
+                                patterns per interval.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="section-row feature-card">
+                        <div class="feature-card-inner">
+                            <div class="feature-card-head">
+                                <span class="icon">&#57579;</span>
+                                <h3>Press &amp; Hold</h3>
+                            </div>
+                            <p>
+                                Standard button presses or sustained holds in
+                                milliseconds or seconds.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="section-row feature-card">
+                        <div class="feature-card-inner">
+                            <div class="feature-card-head">
+                                <span class="icon">&#57824;</span>
+                                <h3>Keyboard Mode</h3>
+                            </div>
+                            <p>
+                                Repeat any key or modifier combo
+                                (<code>Ctrl</code>, <code>Alt</code>,
+                                <code>Shift</code>, <code>Win</code>).
+                            </p>
+                        </div>
+                    </div>
+                    <div class="section-row feature-card">
+                        <div class="feature-card-inner">
+                            <div class="feature-card-head">
+                                <span class="icon">&#57824;</span>
+                                <h3>Virtual Keyboard</h3>
+                            </div>
+                            <p>
+                                Interactive QWERTY, F1-F12, modifiers and Numpad
+                                key picker.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="section-row feature-card">
+                        <div class="feature-card-inner">
+                            <div class="feature-card-head">
+                                <span class="icon">&#58570;</span>
+                                <h3>Macro Recording</h3>
+                            </div>
+                            <p>
+                                Record live mouse and keyboard actions globally
+                                with input filters.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="section-row feature-card">
+                        <div class="feature-card-inner">
+                            <div class="feature-card-head">
+                                <span class="icon">&#57714;</span>
+                                <h3>Macro Editor</h3>
+                            </div>
+                            <p>
+                                Edit, duplicate, batch-edit and reorder steps
+                                via drag-and-drop.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="section-row feature-card">
+                        <div class="feature-card-inner">
+                            <div class="feature-card-head">
+                                <span class="icon">&#58633;</span>
+                                <h3>Smooth &amp; Instant Move</h3>
+                            </div>
+                            <p>
+                                Automate cursor movement with instant jumps or
+                                smooth trajectories.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="section-row feature-card">
+                        <div class="feature-card-inner">
+                            <div class="feature-card-head">
+                                <span class="icon">&#59030;</span>
+                                <h3>Timing &amp; Jitter</h3>
+                            </div>
+                            <p>
+                                Exact hour/min/sec/ms intervals plus random
+                                timing variation.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="section-row feature-card">
+                        <div class="feature-card-inner">
+                            <div class="feature-card-head">
+                                <span class="icon">&#58490;</span>
+                                <h3>Repeat Control</h3>
+                            </div>
+                            <p>
+                                Run infinitely, repeat a fixed count, or run for
+                                a set duration.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="section-row feature-card">
+                        <div class="feature-card-inner">
+                            <div class="feature-card-head">
+                                <span class="icon">&#58633;</span>
+                                <h3>Coordinate Picker</h3>
+                            </div>
+                            <p>
+                                Click at current cursor or pick a fixed screen
+                                X/Y via <code>Ctrl+P</code>.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="section-row feature-card">
+                        <div class="feature-card-inner">
+                            <div class="feature-card-head">
+                                <span class="icon">&#57987;</span>
+                                <h3>Mouse Jiggler</h3>
+                            </div>
+                            <p>
+                                Keep sessions active with Random, Linear, Circle
+                                &amp; O-Zone patterns.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="section-row feature-card">
+                        <div class="feature-card-inner">
+                            <div class="feature-card-head">
+                                <span class="icon">&#xe36b;</span>
+                                <h3>Profiles &amp; JSON</h3>
+                            </div>
+                            <p>
+                                Save setups as named profiles and import or
+                                export JSON configs.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="section-row feature-card">
+                        <div class="feature-card-inner">
+                            <div class="feature-card-head">
+                                <span class="icon">&#xe284;</span>
+                                <h3>Global Hotkeys</h3>
+                            </div>
+                            <p>
+                                Trigger Start/Stop (<code>F6</code>), Pick
+                                (<code>Ctrl+P</code>) &amp; Record
+                                (<code>Ctrl+Shift+R</code>).
+                            </p>
+                        </div>
+                    </div>
+                    <div class="section-row feature-card">
+                        <div class="feature-card-inner">
+                            <div class="feature-card-head">
+                                <span class="icon">&#xe154;</span>
+                                <h3>CLI Switches</h3>
+                            </div>
+                            <p>
+                                Script automation with <code>--toggle</code>,
+                                <code>--start</code>, <code>--stop</code> and
+                                <code>--exit</code>.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="section-row feature-card">
+                        <div class="feature-card-inner">
+                            <div class="feature-card-head">
+                                <span class="icon">&#xe154;</span>
+                                <h3>System Tray</h3>
+                            </div>
+                            <p>
+                                Keep FluAutoClicker running quietly in the
+                                background tray.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="section-row feature-card">
+                        <div class="feature-card-inner">
+                            <div class="feature-card-head">
+                                <span class="icon">&#xe47b;</span>
+                                <h3>Acrylic &amp; Themes</h3>
+                            </div>
+                            <p>
+                                Windows Acrylic blur, Flu &amp; Vesper presets,
+                                and custom accent colors.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="section-row feature-card">
+                        <div class="feature-card-inner">
+                            <div class="feature-card-head">
+                                <span class="icon">&#xe36b;</span>
+                                <h3>Linux /dev/uinput</h3>
+                            </div>
+                            <p>
+                                AppImage, DEB &amp; RPM builds with X11 and
+                                Hyprland shortcut support.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="and-more-card font-logo"
+                    data-i18n="features.more.title"
+                >
+                    and more...
+                </div>
+            </section>
+        </main>
+
+        <footer class="site-footer">
+            <div class="site-footer-inner">
+                <span class="footer-left-brand">
+                    <a
+                        href="https://github.com/Agzes/FluAutoClicker"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        >FluAutoClicker</a
+                    >
+                    <span class="footer-dot">•</span>
+                    <a
+                        href="https://github.com/Agzes/FluAutoClicker/blob/main/LICENSE"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-i18n="footer.license"
+                        >MIT License</a
+                    >
+                </span>
+
+                <a
+                    href="https://agzes.github.io/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="footer-made-with"
+                >
+                    <span data-i18n="footer.with">With</span>
+                    <span class="icon footer-heart" aria-label="love"
+                        >&#57586;</span
+                    >
+                    <span data-i18n="footer.by">by Agzes</span>
+                </a>
+
+                <div class="footer-links">
+                    <a
+                        href="https://github.com/Agzes/FluAutoClicker"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        >GitHub</a
+                    >
+                    <a
+                        href="https://github.com/Agzes/FluAutoClicker/releases/latest"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-i18n="footer.releases"
+                        >Releases</a
+                    >
+                    <a
+                        href="https://agzes.github.io/go/to/discord"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        >Discord</a
+                    >
+                </div>
+            </div>
+        </footer>
+
+        <div
+            class="lang-modal-overlay"
+            id="lang-modal-overlay"
+            aria-hidden="true"
+        >
+            <div
+                class="drawer-modal-shell"
+                id="lang-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="lang-modal-title"
+            >
+                <div class="drawer-modal-content-wrap">
+                    <div class="drawer-modal-header">
+                        <div class="drawer-modal-header-left">
+                            <span
+                                class="icon"
+                                style="font-size: 13px; color: var(--accent)"
+                                aria-hidden="true"
+                                >&#57598;</span
+                            >
+                        </div>
+                        <div class="drawer-modal-header-title">
+                            <span
+                                id="lang-modal-title"
+                                style="font-weight: 700; color: var(--accent)"
+                                data-i18n="lang.title"
+                                >Language</span
+                            >
+                        </div>
+                        <button
+                            type="button"
+                            class="lang-modal-close"
+                            id="lang-modal-close"
+                            aria-label="Close"
+                        >
+                            <svg
+                                width="12"
+                                height="12"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2.2"
+                                stroke-linecap="round"
+                            >
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="drawer-modal-body">
+                        <div class="drawer-modal-picker-wrap">
+                            <div class="language-list" id="lang-modal-grid">
+                                <button
+                                    type="button"
+                                    class="lang-card"
+                                    data-lang="en"
+                                >
+                                    <span class="lang-card-flag"></span>
+                                    <span class="lang-card-label">English</span>
+                                    <span
+                                        class="lang-check-icon"
+                                        aria-hidden="true"
+                                        >✓</span
+                                    >
+                                </button>
+                                <button
+                                    type="button"
+                                    class="lang-card"
+                                    data-lang="ru"
+                                >
+                                    <span class="lang-card-flag"></span>
+                                    <span class="lang-card-label">Русский</span>
+                                    <span
+                                        class="lang-check-icon"
+                                        aria-hidden="true"
+                                        >✓</span
+                                    >
+                                </button>
+                                <button
+                                    type="button"
+                                    class="lang-card"
+                                    data-lang="de"
+                                >
+                                    <span class="lang-card-flag"></span>
+                                    <span class="lang-card-label">Deutsch</span>
+                                    <span
+                                        class="lang-check-icon"
+                                        aria-hidden="true"
+                                        >✓</span
+                                    >
+                                </button>
+                                <button
+                                    type="button"
+                                    class="lang-card"
+                                    data-lang="es"
+                                >
+                                    <span class="lang-card-flag"></span>
+                                    <span class="lang-card-label">Español</span>
+                                    <span
+                                        class="lang-check-icon"
+                                        aria-hidden="true"
+                                        >✓</span
+                                    >
+                                </button>
+                                <button
+                                    type="button"
+                                    class="lang-card"
+                                    data-lang="fr"
+                                >
+                                    <span class="lang-card-flag"></span>
+                                    <span class="lang-card-label"
+                                        >Français</span
+                                    >
+                                    <span
+                                        class="lang-check-icon"
+                                        aria-hidden="true"
+                                        >✓</span
+                                    >
+                                </button>
+                                <button
+                                    type="button"
+                                    class="lang-card"
+                                    data-lang="pt"
+                                >
+                                    <span class="lang-card-flag"></span>
+                                    <span class="lang-card-label"
+                                        >Português</span
+                                    >
+                                    <span
+                                        class="lang-check-icon"
+                                        aria-hidden="true"
+                                        >✓</span
+                                    >
+                                </button>
+                                <button
+                                    type="button"
+                                    class="lang-card"
+                                    data-lang="ja"
+                                >
+                                    <span class="lang-card-flag"></span>
+                                    <span class="lang-card-label">日本語</span>
+                                    <span
+                                        class="lang-check-icon"
+                                        aria-hidden="true"
+                                        >✓</span
+                                    >
+                                </button>
+                                <button
+                                    type="button"
+                                    class="lang-card"
+                                    data-lang="ko"
+                                >
+                                    <span class="lang-card-flag"></span>
+                                    <span class="lang-card-label">한국어</span>
+                                    <span
+                                        class="lang-check-icon"
+                                        aria-hidden="true"
+                                        >✓</span
+                                    >
+                                </button>
+                                <button
+                                    type="button"
+                                    class="lang-card"
+                                    data-lang="zh"
+                                >
+                                    <span class="lang-card-flag"></span>
+                                    <span class="lang-card-label">中文</span>
+                                    <span
+                                        class="lang-check-icon"
+                                        aria-hidden="true"
+                                        >✓</span
+                                    >
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="i18n.js"></script>
+        <script src="script.js"></script>
+    </body>
+</html>
