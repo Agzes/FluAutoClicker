@@ -16,6 +16,46 @@ use super::types::{
 
 const INTRA_CLICK_GAP_MS: f64 = 25.0;
 
+#[cfg(target_os = "windows")]
+#[link(name = "winmm")]
+extern "system" {
+    fn timeBeginPeriod(uPeriod: u32) -> u32;
+    fn timeEndPeriod(uPeriod: u32) -> u32;
+}
+
+#[cfg(target_os = "windows")]
+struct WindowsTimerPeriodGuard {
+    period_ms: u32,
+    active: bool,
+}
+
+#[cfg(target_os = "windows")]
+impl WindowsTimerPeriodGuard {
+    fn new(period_ms: u32) -> Self {
+        let active = unsafe { timeBeginPeriod(period_ms) } == 0;
+        Self { period_ms, active }
+    }
+}
+
+#[cfg(target_os = "windows")]
+impl Drop for WindowsTimerPeriodGuard {
+    fn drop(&mut self) {
+        if self.active {
+            unsafe {
+                timeEndPeriod(self.period_ms);
+            }
+        }
+    }
+}
+
+async fn sleep_until_offset(start: Instant, offset_ms: u64) {
+    let target = Duration::from_millis(offset_ms);
+    let elapsed = start.elapsed();
+    if target > elapsed {
+        sleep(target - elapsed).await;
+    }
+}
+
 fn intra_click_gap_ms(multiplier: f64) -> u64 {
     (INTRA_CLICK_GAP_MS / multiplier).round().max(1.0) as u64
 }
@@ -774,6 +814,7 @@ async fn linear_move_to(
 
     let duration_ms = duration_ms.max(16);
     let step_count = ((duration_ms as f32 / 12.0).ceil() as u32).clamp(2, 120);
+    let move_start = Instant::now();
 
     for step in 1..=step_count {
         let progress = step as f32 / step_count as f32;
@@ -784,10 +825,8 @@ async fn linear_move_to(
             .move_mouse(next_x, next_y, Coordinate::Abs)
             .map_err(|e| format!("Could not move the mouse. Details: {}", e))?;
 
-        sleep(Duration::from_millis(
-            (duration_ms / step_count.max(1)) as u64,
-        ))
-        .await;
+        let target_ms = ((duration_ms as f64) * (step as f64 / step_count as f64)).round() as u64;
+        sleep_until_offset(move_start, target_ms).await;
     }
 
     Ok(())
@@ -829,12 +868,14 @@ async fn play_smooth_path(
     }
 
     let duration_ms = duration_ms.max(1);
+    let move_start = Instant::now();
+    let mut cumulative_length = 0.0f32;
 
     for i in 1..path.len() {
         let (start_x, start_y) = path[i - 1];
         let (target_x, target_y) = path[i];
-        let segment_duration =
-            (duration_ms as f32 * segment_lengths[i - 1] / total_length).max(8.0) as u32;
+        let seg_len = segment_lengths[i - 1];
+        let segment_duration = (duration_ms as f32 * seg_len / total_length).max(8.0) as u32;
         let step_count = ((segment_duration as f32 / 8.0).ceil() as u32).clamp(2, 60);
 
         for step in 1..=step_count {
@@ -844,11 +885,11 @@ async fn play_smooth_path(
             enigo
                 .move_mouse(x, y, Coordinate::Abs)
                 .map_err(|e| format!("Could not move the mouse. Details: {}", e))?;
-            sleep(Duration::from_millis(
-                (segment_duration / step_count.max(1)) as u64,
-            ))
-            .await;
+            let covered = cumulative_length + seg_len * progress;
+            let target_ms = ((duration_ms as f64) * (covered / total_length) as f64).round() as u64;
+            sleep_until_offset(move_start, target_ms).await;
         }
+        cumulative_length += seg_len;
     }
 
     Ok(())
@@ -863,18 +904,16 @@ async fn play_raw_move(
     if points.is_empty() {
         return Ok(());
     }
-    let mut prev_ts = points[0].2;
+    let move_start = Instant::now();
+    let first_ts = points[0].2;
     for &(x, y, ts) in points {
+        if ts > first_ts {
+            let target_ms = ((ts - first_ts) as f64 / multiplier).round() as u64;
+            sleep_until_offset(move_start, target_ms).await;
+        }
         enigo
             .move_mouse(x, y, Coordinate::Abs)
             .map_err(|e| format!("Could not move the mouse. Details: {}", e))?;
-        if ts > prev_ts {
-            let delay_ms = ((ts - prev_ts) as f64 / multiplier).round() as u64;
-            if delay_ms > 0 {
-                sleep(Duration::from_millis(delay_ms)).await;
-            }
-        }
-        prev_ts = ts;
     }
     Ok(())
 }
@@ -889,6 +928,7 @@ async fn linear_move_to(
     let (start_x, start_y) = current_cursor_position().unwrap_or((target_x, target_y));
     let duration_ms = duration_ms.max(16);
     let step_count = ((duration_ms as f32 / 12.0).ceil() as u32).clamp(2, 120);
+    let move_start = Instant::now();
 
     for step in 1..=step_count {
         let progress = step as f32 / step_count as f32;
@@ -897,10 +937,8 @@ async fn linear_move_to(
 
         backend.move_mouse(next_x, next_y)?;
 
-        sleep(Duration::from_millis(
-            (duration_ms / step_count.max(1)) as u64,
-        ))
-        .await;
+        let target_ms = ((duration_ms as f64) * (step as f64 / step_count as f64)).round() as u64;
+        sleep_until_offset(move_start, target_ms).await;
     }
 
     Ok(())
@@ -938,12 +976,14 @@ async fn play_smooth_path(
     }
 
     let duration_ms = duration_ms.max(1);
+    let move_start = Instant::now();
+    let mut cumulative_length = 0.0f32;
 
     for i in 1..path.len() {
         let (start_x, start_y) = path[i - 1];
         let (target_x, target_y) = path[i];
-        let segment_duration =
-            (duration_ms as f32 * segment_lengths[i - 1] / total_length).max(8.0) as u32;
+        let seg_len = segment_lengths[i - 1];
+        let segment_duration = (duration_ms as f32 * seg_len / total_length).max(8.0) as u32;
         let step_count = ((segment_duration as f32 / 8.0).ceil() as u32).clamp(2, 60);
 
         for step in 1..=step_count {
@@ -951,11 +991,11 @@ async fn play_smooth_path(
             let x = start_x + ((target_x - start_x) as f32 * progress).round() as i32;
             let y = start_y + ((target_y - start_y) as f32 * progress).round() as i32;
             backend.move_mouse(x, y)?;
-            sleep(Duration::from_millis(
-                (segment_duration / step_count.max(1)) as u64,
-            ))
-            .await;
+            let covered = cumulative_length + seg_len * progress;
+            let target_ms = ((duration_ms as f64) * (covered / total_length) as f64).round() as u64;
+            sleep_until_offset(move_start, target_ms).await;
         }
+        cumulative_length += seg_len;
     }
 
     Ok(())
@@ -970,16 +1010,14 @@ async fn play_raw_move(
     if points.is_empty() {
         return Ok(());
     }
-    let mut prev_ts = points[0].2;
+    let move_start = Instant::now();
+    let first_ts = points[0].2;
     for &(x, y, ts) in points {
-        backend.move_mouse(x, y)?;
-        if ts > prev_ts {
-            let delay_ms = ((ts - prev_ts) as f64 / multiplier).round() as u64;
-            if delay_ms > 0 {
-                sleep(Duration::from_millis(delay_ms)).await;
-            }
+        if ts > first_ts {
+            let target_ms = ((ts - first_ts) as f64 / multiplier).round() as u64;
+            sleep_until_offset(move_start, target_ms).await;
         }
-        prev_ts = ts;
+        backend.move_mouse(x, y)?;
     }
     Ok(())
 }
@@ -1106,6 +1144,8 @@ async fn playback_loop(
         }
     };
     let start_time = Instant::now();
+    #[cfg(target_os = "windows")]
+    let _timer_guard = WindowsTimerPeriodGuard::new(1);
     let speed_multiplier = *state.speed_multiplier.lock().await;
 
     let max_iterations = match repeat_mode {

@@ -9,13 +9,32 @@ import { notify } from "../notifications";
 
 export function getMacroDurationMs(actions: MacroBackendAction[]): number {
     let totalMs = 0;
-    for (const action of actions) {
+    for (let i = 0; i < actions.length; i += 1) {
+        const action = actions[i];
         const config = action.config;
         if (!config || !config.type) continue;
 
         if (config.type === "sleep") {
             totalMs += Number(config.duration_ms) || 0;
-        } else if (config.type === "mouse" || config.type === "keyboard") {
+        } else if (config.type === "mouse") {
+            if (config.position) {
+                totalMs += 10;
+            }
+            const act = config.action;
+            if (act && typeof act === "object" && "hold" in act) {
+                const hold = (act as { hold?: { duration_ms?: unknown } }).hold;
+                const duration = Number(hold?.duration_ms);
+                if (Number.isFinite(duration)) {
+                    totalMs += duration;
+                }
+            } else if (act === "press" || !act) {
+                const clicks = Math.min(
+                    3,
+                    Math.max(1, Number(config.clicks) || 1),
+                );
+                totalMs += clicks * 50 + (clicks - 1) * 25;
+            }
+        } else if (config.type === "keyboard") {
             const act = config.action;
             if (act && typeof act === "object" && "hold" in act) {
                 const hold = (act as { hold?: { duration_ms?: unknown } }).hold;
@@ -46,7 +65,28 @@ export function getMacroDurationMs(actions: MacroBackendAction[]): number {
                 }
             }
         } else if (config.type === "raw_move") {
-            totalMs += Number(config.duration_ms) || 0;
+            const points = (config as { points?: unknown }).points;
+            if (Array.isArray(points) && points.length >= 2) {
+                const firstTs = Number((points[0] as unknown[])[2]) || 0;
+                const lastTs =
+                    Number((points[points.length - 1] as unknown[])[2]) || 0;
+                if (lastTs >= firstTs) {
+                    totalMs += lastTs - firstTs;
+                }
+            } else {
+                totalMs += Number(config.duration_ms) || 0;
+            }
+        }
+
+        const nextAction = actions[i + 1];
+        if (nextAction) {
+            const ts = Number(action.timestamp_ms) || 0;
+            const nextTs = Number(nextAction.timestamp_ms) || 0;
+            if (ts > 0 && nextTs >= ts) {
+                totalMs += nextTs - ts;
+            } else {
+                totalMs += 5;
+            }
         }
     }
     return totalMs;
