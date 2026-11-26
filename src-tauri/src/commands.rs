@@ -334,7 +334,16 @@ pub async fn save_app_config(
     state
         .minimize_to_tray
         .store(config.general.minimize_to_tray, Ordering::SeqCst);
-    crate::engine::config_store::save_config(&config).await
+    let active_profile = crate::validate_profile_name(&config.active_profile)
+        .unwrap_or_else(|_| "default".to_string());
+    config.active_profile = active_profile.clone();
+    crate::engine::config_store::save_config(&config).await?;
+    let existing_icon = crate::engine::config_store::load_profile_file(&active_profile)
+        .await
+        .ok()
+        .and_then(|profile| profile.icon);
+    crate::engine::config_store::save_profile(&active_profile, &config, existing_icon.as_deref())
+        .await
 }
 
 #[tauri::command]

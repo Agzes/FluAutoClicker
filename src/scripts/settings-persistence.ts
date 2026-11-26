@@ -1,7 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { setKeyBadgeContent } from "./key-badges";
-import { getPlatformCapabilities, type PlatformCapabilities } from "./platform-capabilities";
+import {
+    getPlatformCapabilities,
+    type PlatformCapabilities,
+} from "./platform-capabilities";
 import { setSelectedMode } from "./ui";
 import type { AppMode } from "./ui";
 import { updateSliderFill } from "./utils";
@@ -103,6 +106,7 @@ const APP_MODES = new Set(["mouse", "keyboard", "macro"]);
 
 let currentConfig: AppConfigFile | null = null;
 let saveTimeoutId: number | null = null;
+let inFlightSavePromise: Promise<void> | null = null;
 let isApplyingSnapshot = false;
 let platformCapabilities: PlatformCapabilities | null = null;
 
@@ -209,19 +213,24 @@ function setActiveButton(groupId: string, value: string) {
     if (!group) return;
 
     let matched = false;
-    group.querySelectorAll<HTMLElement>(".toggle-option, .multi-btn").forEach((button) => {
-        const buttonValue = button.dataset.value
-            || button.dataset.pattern
-            || button.dataset.mode
-            || button.textContent?.trim().toLowerCase()
-            || "";
-        const isActive = buttonValue === value;
-        button.classList.toggle("active", isActive);
-        if (isActive) matched = true;
-    });
+    group
+        .querySelectorAll<HTMLElement>(".toggle-option, .multi-btn")
+        .forEach((button) => {
+            const buttonValue =
+                button.dataset.value ||
+                button.dataset.pattern ||
+                button.dataset.mode ||
+                button.textContent?.trim().toLowerCase() ||
+                "";
+            const isActive = buttonValue === value;
+            button.classList.toggle("active", isActive);
+            if (isActive) matched = true;
+        });
 
     if (!matched && groupId === "mouse-button-toggle") {
-        const fallback = group.querySelector<HTMLElement>('.multi-btn[data-value="left"]');
+        const fallback = group.querySelector<HTMLElement>(
+            '.multi-btn[data-value="left"]',
+        );
         fallback?.classList.add("active");
     }
 
@@ -247,15 +256,20 @@ function setKeyboardSelection(key: string, modifiers: string) {
         modifiers
             .split("+")
             .map((part) => part.trim().toLowerCase())
-            .filter((part) => part && part !== "none")
+            .filter((part) => part && part !== "none"),
     );
-    const keyboardSection = document.getElementById("keyboard-section") || document;
+    const keyboardSection =
+        document.getElementById("keyboard-section") || document;
     let hasActiveMainKey = false;
 
     keyboardSection.querySelectorAll(".kb-key").forEach((button) => {
         const element = button as HTMLElement;
         const label = element.textContent?.trim().toLowerCase() || "";
-        if (!label || element.classList.contains("kb-tsu") || element.classList.contains("kb-menu")) {
+        if (
+            !label ||
+            element.classList.contains("kb-tsu") ||
+            element.classList.contains("kb-menu")
+        ) {
             element.classList.remove("active");
             return;
         }
@@ -270,27 +284,36 @@ function setKeyboardSelection(key: string, modifiers: string) {
         element.classList.toggle("active", isActive);
     });
 
-    const comboDisplay = document.querySelector("#keyboard-section .kb-selected-combo");
+    const comboDisplay = document.querySelector(
+        "#keyboard-section .kb-selected-combo",
+    );
     if (comboDisplay) {
-        setKeyBadgeContent(comboDisplay, [...Array.from(modifierSet), normalizedKey || ""].filter(Boolean));
+        setKeyBadgeContent(
+            comboDisplay,
+            [...Array.from(modifierSet), normalizedKey || ""].filter(Boolean),
+        );
     }
 }
 
 function applyMacroRepeatSettings(config: AppConfigFile) {
     const repeatMode = config.macro_settings.repeat_mode;
     const repeatToggleValue = repeatMode === "infinite" ? "infinite" : "finite";
-    const finiteModeValue = repeatMode === "finite_seconds" ? "seconds" : "times";
-    const countValue = repeatMode === "finite_seconds"
-        ? Math.max(1, Math.round(config.macro_settings.repeat_duration_ms / 1000))
-        : config.macro_settings.repeat_count;
+    const finiteModeValue =
+        repeatMode === "finite_seconds" ? "seconds" : "times";
+    const countValue =
+        repeatMode === "finite_seconds"
+            ? Math.max(
+                  1,
+                  Math.round(config.macro_settings.repeat_duration_ms / 1000),
+              )
+            : config.macro_settings.repeat_count;
 
     setActiveButton("macro-repeat-toggle", repeatToggleValue);
     setActiveButton("macro-finite-mode-toggle", finiteModeValue);
     setInputValue("macro-repeat-count", countValue);
-    document.getElementById("macro-repeat-finite-section")?.classList.toggle(
-        "expanded",
-        repeatToggleValue === "finite"
-    );
+    document
+        .getElementById("macro-repeat-finite-section")
+        ?.classList.toggle("expanded", repeatToggleValue === "finite");
 }
 
 function applyLocalStorageSnapshot(config: AppConfigFile) {
@@ -298,13 +321,23 @@ function applyLocalStorageSnapshot(config: AppConfigFile) {
     localStorage.setItem("flu-theme-color", config.general.theme_color);
     localStorage.setItem("flu-theme-name", config.general.theme_name);
     localStorage.setItem("flu-no-italic", String(config.general.remove_italic));
-    localStorage.setItem("flu-font-app", config.general.font_app || "museo-moderno");
-    localStorage.setItem("flu-font-loc", config.general.font_loc || "geologica");
+    localStorage.setItem(
+        "flu-font-app",
+        config.general.font_app || "museo-moderno",
+    );
+    localStorage.setItem(
+        "flu-font-loc",
+        config.general.font_loc || "geologica",
+    );
     localStorage.setItem("flu-language", config.general.language || "en");
-    localStorage.setItem("flu-reduce-motion", config.general.reduce_motion || "none");
+    localStorage.setItem(
+        "flu-reduce-motion",
+        config.general.reduce_motion || "none",
+    );
 
     const frontendState = config.frontend_state || {};
-    const windowControlIcons = frontendState.window_control_icons === "classic" ? "classic" : "fluent";
+    const windowControlIcons =
+        frontendState.window_control_icons === "classic" ? "classic" : "fluent";
     localStorage.setItem(WINDOW_CONTROL_ICONS_STORAGE_KEY, windowControlIcons);
     const notifications = {
         ...readFrontendNotifications(),
@@ -312,9 +345,12 @@ function applyLocalStorageSnapshot(config: AppConfigFile) {
     };
     localStorage.setItem(
         "flu-window-acrylic",
-        frontendState.acrylic_enabled === true ? "true" : "false"
+        frontendState.acrylic_enabled === true ? "true" : "false",
     );
-    localStorage.setItem(ALWAYS_ON_TOP_STORAGE_KEY, frontendState.always_on_top === true ? "true" : "false");
+    localStorage.setItem(
+        ALWAYS_ON_TOP_STORAGE_KEY,
+        frontendState.always_on_top === true ? "true" : "false",
+    );
     localStorage.setItem("flu-frontend-state", JSON.stringify(notifications));
 }
 
@@ -327,27 +363,41 @@ function asFrontendRecord(value: unknown): Record<string, unknown> {
 
 function readFrontendNotifications(): Record<string, unknown> {
     try {
-        return asFrontendRecord(JSON.parse(localStorage.getItem("flu-frontend-state") || "{}"));
+        return asFrontendRecord(
+            JSON.parse(localStorage.getItem("flu-frontend-state") || "{}"),
+        );
     } catch {
         return {};
     }
 }
 
 function readStoredUpdateLastCheckedAt(): number {
-    const parsed = Number.parseInt(localStorage.getItem(UPDATE_LAST_CHECK_STORAGE_KEY) || "", 10);
+    const parsed = Number.parseInt(
+        localStorage.getItem(UPDATE_LAST_CHECK_STORAGE_KEY) || "",
+        10,
+    );
     return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function applyUpdateCheckSnapshot(config: AppConfigFile) {
     const persisted = config.updates?.last_checked_at_unix_ms || 0;
     const local = readStoredUpdateLastCheckedAt();
-    localStorage.setItem(UPDATE_LAST_CHECK_STORAGE_KEY, String(Math.max(persisted, local)));
+    localStorage.setItem(
+        UPDATE_LAST_CHECK_STORAGE_KEY,
+        String(Math.max(persisted, local)),
+    );
 }
 
 function applyConfigToUi(config: AppConfigFile) {
     const frontendState = config.frontend_state || {};
-    const mouseTiming = (frontendState.mouse_timing || {}) as Record<string, number>;
-    const keyboardTiming = (frontendState.keyboard_timing || {}) as Record<string, number>;
+    const mouseTiming = (frontendState.mouse_timing || {}) as Record<
+        string,
+        number
+    >;
+    const keyboardTiming = (frontendState.keyboard_timing || {}) as Record<
+        string,
+        number
+    >;
 
     setInputValue("mouse-hours", mouseTiming.hours ?? 0);
     setInputValue("mouse-minutes", mouseTiming.minutes ?? 0);
@@ -369,7 +419,10 @@ function applyConfigToUi(config: AppConfigFile) {
     setInputValue("kb-hold-duration", config.keyboard.hold_duration);
     setInputValue("kb-repeat-count", config.keyboard.repeat_count);
 
-    const jigglerIntervalMs = Math.min(300000, Math.max(100, config.jiggler.interval_ms));
+    const jigglerIntervalMs = Math.min(
+        300000,
+        Math.max(100, config.jiggler.interval_ms),
+    );
     const jigglerDistance = Math.min(500, Math.max(5, config.jiggler.distance));
     setInputValue("jiggler-slider", jigglerIntervalMs);
     setInputValue("jiggler-interval-input", jigglerIntervalMs);
@@ -394,38 +447,88 @@ function applyConfigToUi(config: AppConfigFile) {
     setToggleState("jiggler-btn", config.jiggler.active);
     setActiveButton("jiggler-pattern-row", config.jiggler.pattern);
 
-    setToggleState("autostart-toggle", isSystemStartupAvailable() && config.general.autostart);
+    setToggleState(
+        "autostart-toggle",
+        isSystemStartupAvailable() && config.general.autostart,
+    );
     const autostartTrigger = document.getElementById("autostart-trigger");
     autostartTrigger?.classList.toggle("disabled", !isSystemStartupAvailable());
-    autostartTrigger?.setAttribute("aria-disabled", isSystemStartupAvailable() ? "false" : "true");
+    autostartTrigger?.setAttribute(
+        "aria-disabled",
+        isSystemStartupAvailable() ? "false" : "true",
+    );
     if (!isSystemStartupAvailable()) {
-        const desc = autostartTrigger?.querySelector<HTMLElement>(".settings-item-desc");
-        if (desc) desc.textContent = t("settings.unavailable_desktop", "Unavailable on this desktop");
+        const desc = autostartTrigger?.querySelector<HTMLElement>(
+            ".settings-item-desc",
+        );
+        if (desc)
+            desc.textContent = t(
+                "settings.unavailable_desktop",
+                "Unavailable on this desktop",
+            );
     }
     setToggleState("tray-toggle", config.general.minimize_to_tray);
     setToggleState("remove-italic-toggle", config.general.remove_italic);
     setToggleState("acrylic-toggle", frontendState.acrylic_enabled === true);
-    setToggleState("classic-window-icons-toggle", frontendState.window_control_icons === "classic");
-    setToggleState("always-on-top-toggle", frontendState.always_on_top === true);
-    setToggleState("macro-live-update-toggle", config.macro_settings.recording_options.record_live_preview !== false);
-    setActiveButton("reduce-motion-row", config.general.reduce_motion || "none");
+    setToggleState(
+        "classic-window-icons-toggle",
+        frontendState.window_control_icons === "classic",
+    );
+    setToggleState(
+        "always-on-top-toggle",
+        frontendState.always_on_top === true,
+    );
+    setToggleState(
+        "macro-live-update-toggle",
+        config.macro_settings.recording_options.record_live_preview !== false,
+    );
+    setActiveButton(
+        "reduce-motion-row",
+        config.general.reduce_motion || "none",
+    );
     applyReduceMotionClasses(config.general.reduce_motion || "none");
     applyMacroRepeatSettings(config);
 
     const activeTabCandidate = String(frontendState.active_tab || "mouse");
-    const activeTab: AppMode = APP_MODES.has(activeTabCandidate) ? activeTabCandidate as AppMode : "mouse";
+    const activeTab: AppMode = APP_MODES.has(activeTabCandidate)
+        ? (activeTabCandidate as AppMode)
+        : "mouse";
     setSelectedMode(activeTab);
 
     refreshSliderFills();
     requestAnimationFrame(refreshSliderFills);
 }
 
+export function cancelPendingSave() {
+    if (saveTimeoutId !== null) {
+        window.clearTimeout(saveTimeoutId);
+        saveTimeoutId = null;
+    }
+}
+
+export async function flushPendingSave() {
+    if (saveTimeoutId !== null) {
+        window.clearTimeout(saveTimeoutId);
+        saveTimeoutId = null;
+        await persistSnapshot();
+    } else if (inFlightSavePromise) {
+        await inFlightSavePromise;
+    }
+}
+
+export function createDefaultConfig(): AppConfigFile {
+    return defaultConfig();
+}
+
 export function applyPersistedConfig(config: AppConfigFile) {
+    cancelPendingSave();
     currentConfig = config;
     applyLocalStorageSnapshot(config);
     applyUpdateCheckSnapshot(config);
     applyConfigToUi(config);
-    window.dispatchEvent(new CustomEvent(SETTINGS_APPLIED_EVENT, { detail: config }));
+    window.dispatchEvent(
+        new CustomEvent(SETTINGS_APPLIED_EVENT, { detail: config }),
+    );
 }
 
 async function fetchHotkeys(): Promise<Hotkeys> {
@@ -440,9 +543,13 @@ async function fetchHotkeys(): Promise<Hotkeys> {
     }
 }
 
-async function fetchMacroSettings(fallback: AppConfigFile["macro_settings"]): Promise<AppConfigFile["macro_settings"]> {
+async function fetchMacroSettings(
+    fallback: AppConfigFile["macro_settings"],
+): Promise<AppConfigFile["macro_settings"]> {
     try {
-        return await invoke<AppConfigFile["macro_settings"]>("get_macro_settings");
+        return await invoke<AppConfigFile["macro_settings"]>(
+            "get_macro_settings",
+        );
     } catch {
         return fallback;
     }
@@ -451,11 +558,11 @@ async function fetchMacroSettings(fallback: AppConfigFile["macro_settings"]): Pr
 function getActiveValue(selector: string, fallback: string): string {
     const element = document.querySelector<HTMLElement>(selector);
     return (
-        element?.dataset.value
-        || element?.dataset.pattern
-        || element?.dataset.mode
-        || element?.textContent?.trim().toLowerCase()
-        || fallback
+        element?.dataset.value ||
+        element?.dataset.pattern ||
+        element?.dataset.mode ||
+        element?.textContent?.trim().toLowerCase() ||
+        fallback
     );
 }
 
@@ -466,7 +573,8 @@ function getNumericValue(id: string, fallback: number): number {
 }
 
 function getKeyboardSnapshot() {
-    const keyboardSection = document.getElementById("keyboard-section") || document;
+    const keyboardSection =
+        document.getElementById("keyboard-section") || document;
     const activeKeys = keyboardSection.querySelectorAll(".kb-key.active");
     let key = "a";
     const modifiers: string[] = [];
@@ -496,69 +604,166 @@ async function captureConfigSnapshot(): Promise<AppConfigFile> {
     const macroSettings = await fetchMacroSettings(base.macro_settings);
     const keyboard = getKeyboardSnapshot();
     const activeTabCandidate =
-        document.querySelector<HTMLElement>(".mode-tabs .tab.active")?.dataset.tab || "mouse";
-    const activeTab = APP_MODES.has(activeTabCandidate) ? activeTabCandidate : "mouse";
+        document.querySelector<HTMLElement>(".mode-tabs .tab.active")?.dataset
+            .tab || "mouse";
+    const activeTab = APP_MODES.has(activeTabCandidate)
+        ? activeTabCandidate
+        : "mouse";
     return {
         ...base,
         general: {
             ...base.general,
-            theme_mode: localStorage.getItem("flu-theme-mode") || base.general.theme_mode,
-            theme_color: localStorage.getItem("flu-theme-color") || base.general.theme_color,
-            theme_name: localStorage.getItem("flu-theme-name") || base.general.theme_name,
+            theme_mode:
+                localStorage.getItem("flu-theme-mode") ||
+                base.general.theme_mode,
+            theme_color:
+                localStorage.getItem("flu-theme-color") ||
+                base.general.theme_color,
+            theme_name:
+                localStorage.getItem("flu-theme-name") ||
+                base.general.theme_name,
             remove_italic: localStorage.getItem("flu-no-italic") === "true",
             font_app: localStorage.getItem("flu-font-app") || "museo-moderno",
             font_loc: localStorage.getItem("flu-font-loc") || "geologica",
             language: localStorage.getItem("flu-language") || "en",
-            autostart: isSystemStartupAvailable()
-                && (document.getElementById("autostart-toggle")?.classList.contains("active") ?? base.general.autostart),
-            minimize_to_tray: document.getElementById("tray-toggle")?.classList.contains("active") ?? base.general.minimize_to_tray,
-            reduce_motion: getActiveValue("#reduce-motion-row .multi-btn.active", base.general.reduce_motion || "none"),
+            autostart:
+                isSystemStartupAvailable() &&
+                (document
+                    .getElementById("autostart-toggle")
+                    ?.classList.contains("active") ??
+                    base.general.autostart),
+            minimize_to_tray:
+                document
+                    .getElementById("tray-toggle")
+                    ?.classList.contains("active") ??
+                base.general.minimize_to_tray,
+            reduce_motion: getActiveValue(
+                "#reduce-motion-row .multi-btn.active",
+                base.general.reduce_motion || "none",
+            ),
         },
         mouse: {
             ...base.mouse,
-            cps: Math.max(1, Math.round(1000 / Math.max(1, (
-                getNumericValue("mouse-hours", 0) * 3600000
-                + getNumericValue("mouse-minutes", 0) * 60000
-                + getNumericValue("mouse-seconds", 0) * 1000
-                + getNumericValue("mouse-ms", 0)
-            )))),
-            variation_ms: getNumericValue("mouse-variation", base.mouse.variation_ms),
-            button: getActiveValue("#mouse-button-toggle .multi-btn.active", base.mouse.button),
-            click_mode: getActiveValue("#press-hold-toggle .toggle-option.active", base.mouse.click_mode),
-            click_type: getActiveValue("#mouse-click-type-toggle .toggle-option.active", base.mouse.click_type),
-            hold_duration: getNumericValue("mouse-hold-duration", base.mouse.hold_duration),
-            hold_unit: getActiveValue("#mouse-hold-mode-toggle .toggle-option.active", base.mouse.hold_unit),
-            repeat_mode: getActiveValue("#repeat-toggle .toggle-option.active", base.mouse.repeat_mode),
-            repeat_count: getNumericValue("mouse-repeat-count", base.mouse.repeat_count),
-            repeat_unit: getActiveValue("#finite-mode-toggle .toggle-option.active", base.mouse.repeat_unit),
-            position_mode: getActiveValue("#position-toggle .toggle-option.active", base.mouse.position_mode),
+            cps: Math.max(
+                1,
+                Math.round(
+                    1000 /
+                        Math.max(
+                            1,
+                            getNumericValue("mouse-hours", 0) * 3600000 +
+                                getNumericValue("mouse-minutes", 0) * 60000 +
+                                getNumericValue("mouse-seconds", 0) * 1000 +
+                                getNumericValue("mouse-ms", 0),
+                        ),
+                ),
+            ),
+            variation_ms: getNumericValue(
+                "mouse-variation",
+                base.mouse.variation_ms,
+            ),
+            button: getActiveValue(
+                "#mouse-button-toggle .multi-btn.active",
+                base.mouse.button,
+            ),
+            click_mode: getActiveValue(
+                "#press-hold-toggle .toggle-option.active",
+                base.mouse.click_mode,
+            ),
+            click_type: getActiveValue(
+                "#mouse-click-type-toggle .toggle-option.active",
+                base.mouse.click_type,
+            ),
+            hold_duration: getNumericValue(
+                "mouse-hold-duration",
+                base.mouse.hold_duration,
+            ),
+            hold_unit: getActiveValue(
+                "#mouse-hold-mode-toggle .toggle-option.active",
+                base.mouse.hold_unit,
+            ),
+            repeat_mode: getActiveValue(
+                "#repeat-toggle .toggle-option.active",
+                base.mouse.repeat_mode,
+            ),
+            repeat_count: getNumericValue(
+                "mouse-repeat-count",
+                base.mouse.repeat_count,
+            ),
+            repeat_unit: getActiveValue(
+                "#finite-mode-toggle .toggle-option.active",
+                base.mouse.repeat_unit,
+            ),
+            position_mode: getActiveValue(
+                "#position-toggle .toggle-option.active",
+                base.mouse.position_mode,
+            ),
             coord_x: getNumericValue("coord-x", base.mouse.coord_x),
             coord_y: getNumericValue("coord-y", base.mouse.coord_y),
         },
         keyboard: {
             ...base.keyboard,
-            cps: Math.max(1, Math.round(1000 / Math.max(1, (
-                getNumericValue("kb-hours", 0) * 3600000
-                + getNumericValue("kb-minutes", 0) * 60000
-                + getNumericValue("kb-seconds", 0) * 1000
-                + getNumericValue("kb-ms", 0)
-            )))),
-            variation_ms: getNumericValue("kb-variation", base.keyboard.variation_ms),
+            cps: Math.max(
+                1,
+                Math.round(
+                    1000 /
+                        Math.max(
+                            1,
+                            getNumericValue("kb-hours", 0) * 3600000 +
+                                getNumericValue("kb-minutes", 0) * 60000 +
+                                getNumericValue("kb-seconds", 0) * 1000 +
+                                getNumericValue("kb-ms", 0),
+                        ),
+                ),
+            ),
+            variation_ms: getNumericValue(
+                "kb-variation",
+                base.keyboard.variation_ms,
+            ),
             key: keyboard.key,
             modifiers: keyboard.modifiers,
-            click_mode: getActiveValue("#kb-mode-toggle .toggle-option.active", base.keyboard.click_mode),
-            hold_duration: getNumericValue("kb-hold-duration", base.keyboard.hold_duration),
-            hold_unit: getActiveValue("#kb-hold-mode-toggle .toggle-option.active", base.keyboard.hold_unit),
-            repeat_mode: getActiveValue("#kb-repeat-toggle .toggle-option.active", base.keyboard.repeat_mode),
-            repeat_count: getNumericValue("kb-repeat-count", base.keyboard.repeat_count),
-            repeat_unit: getActiveValue("#kb-finite-mode-toggle .toggle-option.active", base.keyboard.repeat_unit),
+            click_mode: getActiveValue(
+                "#kb-mode-toggle .toggle-option.active",
+                base.keyboard.click_mode,
+            ),
+            hold_duration: getNumericValue(
+                "kb-hold-duration",
+                base.keyboard.hold_duration,
+            ),
+            hold_unit: getActiveValue(
+                "#kb-hold-mode-toggle .toggle-option.active",
+                base.keyboard.hold_unit,
+            ),
+            repeat_mode: getActiveValue(
+                "#kb-repeat-toggle .toggle-option.active",
+                base.keyboard.repeat_mode,
+            ),
+            repeat_count: getNumericValue(
+                "kb-repeat-count",
+                base.keyboard.repeat_count,
+            ),
+            repeat_unit: getActiveValue(
+                "#kb-finite-mode-toggle .toggle-option.active",
+                base.keyboard.repeat_unit,
+            ),
         },
         jiggler: {
             ...base.jiggler,
-            active: document.getElementById("jiggler-toggle")?.classList.contains("active") ?? base.jiggler.active,
-            distance: getNumericValue("jiggler-distance-input", base.jiggler.distance),
-            interval_ms: getNumericValue("jiggler-interval-input", base.jiggler.interval_ms),
-            pattern: getActiveValue("#jiggler-pattern-row .multi-btn.active", base.jiggler.pattern),
+            active:
+                document
+                    .getElementById("jiggler-toggle")
+                    ?.classList.contains("active") ?? base.jiggler.active,
+            distance: getNumericValue(
+                "jiggler-distance-input",
+                base.jiggler.distance,
+            ),
+            interval_ms: getNumericValue(
+                "jiggler-interval-input",
+                base.jiggler.interval_ms,
+            ),
+            pattern: getActiveValue(
+                "#jiggler-pattern-row .multi-btn.active",
+                base.jiggler.pattern,
+            ),
         },
         macro_settings: macroSettings,
         hotkeys,
@@ -569,13 +774,15 @@ async function captureConfigSnapshot(): Promise<AppConfigFile> {
         frontend_state: {
             ...base.frontend_state,
             active_tab: activeTab,
-            acrylic_enabled: localStorage.getItem("flu-window-acrylic") === "true",
-            always_on_top: localStorage.getItem(ALWAYS_ON_TOP_STORAGE_KEY) === "true",
-            window_control_icons: (
-                document.getElementById("classic-window-icons-toggle")?.classList.contains("active")
-                    ? "classic"
-                    : "fluent"
-            ) as WindowControlIconStyle,
+            acrylic_enabled:
+                localStorage.getItem("flu-window-acrylic") === "true",
+            always_on_top:
+                localStorage.getItem(ALWAYS_ON_TOP_STORAGE_KEY) === "true",
+            window_control_icons: (document
+                .getElementById("classic-window-icons-toggle")
+                ?.classList.contains("active")
+                ? "classic"
+                : "fluent") as WindowControlIconStyle,
             notifications: readFrontendNotifications(),
             mouse_timing: {
                 hours: getNumericValue("mouse-hours", 0),
@@ -595,12 +802,26 @@ async function captureConfigSnapshot(): Promise<AppConfigFile> {
 
 async function persistSnapshot() {
     if (isApplyingSnapshot) return;
-    const nextConfig = await captureConfigSnapshot();
-    currentConfig = nextConfig;
+    if (inFlightSavePromise) {
+        await inFlightSavePromise;
+        if (isApplyingSnapshot) return;
+    }
+    const run = (async () => {
+        const nextConfig = await captureConfigSnapshot();
+        currentConfig = nextConfig;
+        try {
+            await invoke("save_app_config", { config: nextConfig });
+        } catch (error) {
+            console.error("Failed to persist settings", error);
+        }
+    })();
+    inFlightSavePromise = run;
     try {
-        await invoke("save_app_config", { config: nextConfig });
-    } catch (error) {
-        console.error("Failed to persist settings", error);
+        await run;
+    } finally {
+        if (inFlightSavePromise === run) {
+            inFlightSavePromise = null;
+        }
     }
 }
 
@@ -618,14 +839,17 @@ function scheduleSave() {
 function initSimpleToggle(
     triggerId: string,
     toggleId: string,
-    onToggle?: (active: boolean) => void | Promise<void>
+    onToggle?: (active: boolean) => void | Promise<void>,
 ) {
     const trigger = document.getElementById(triggerId);
     const toggle = document.getElementById(toggleId);
     if (!trigger || !toggle) return;
 
     trigger.addEventListener("click", () => {
-        if (trigger.classList.contains("disabled") || trigger.getAttribute("aria-disabled") === "true") {
+        if (
+            trigger.classList.contains("disabled") ||
+            trigger.getAttribute("aria-disabled") === "true"
+        ) {
             return;
         }
 
@@ -650,7 +874,8 @@ export async function loadPersistedSettings() {
         platformCapabilities = await getPlatformCapabilities();
         currentConfig = await invoke<AppConfigFile>("load_app_config");
     } catch {
-        platformCapabilities = platformCapabilities || await getPlatformCapabilities();
+        platformCapabilities =
+            platformCapabilities || (await getPlatformCapabilities());
         currentConfig = defaultConfig();
     }
 
@@ -675,26 +900,41 @@ export function applyReduceMotionClasses(value: string) {
 }
 
 export async function initSettingsPersistence() {
-    platformCapabilities = platformCapabilities || await getPlatformCapabilities();
+    platformCapabilities =
+        platformCapabilities || (await getPlatformCapabilities());
 
-    initSimpleToggle("autostart-trigger", "autostart-toggle", async (active) => {
-        if (!isSystemStartupAvailable()) {
-            document.getElementById("autostart-toggle")?.classList.remove("active");
-            return;
-        }
+    initSimpleToggle(
+        "autostart-trigger",
+        "autostart-toggle",
+        async (active) => {
+            if (!isSystemStartupAvailable()) {
+                document
+                    .getElementById("autostart-toggle")
+                    ?.classList.remove("active");
+                return;
+            }
 
-        await invoke("set_start_on_system_startup", { enabled: active });
-    });
+            await invoke("set_start_on_system_startup", { enabled: active });
+        },
+    );
     initSimpleToggle("tray-trigger", "tray-toggle", async (active) => {
         await invoke("set_minimize_to_tray", { enabled: active });
     });
-    initSimpleToggle("classic-window-icons-trigger", "classic-window-icons-toggle", (active) => {
-        setPreferredWindowControlIconStyle(active ? "classic" : "fluent");
-    });
-    initSimpleToggle("always-on-top-trigger", "always-on-top-toggle", async (active) => {
-        await setAlwaysOnTopPreference(active);
-    });
-    
+    initSimpleToggle(
+        "classic-window-icons-trigger",
+        "classic-window-icons-toggle",
+        (active) => {
+            setPreferredWindowControlIconStyle(active ? "classic" : "fluent");
+        },
+    );
+    initSimpleToggle(
+        "always-on-top-trigger",
+        "always-on-top-toggle",
+        async (active) => {
+            await setAlwaysOnTopPreference(active);
+        },
+    );
+
     const reduceMotionRow = document.getElementById("reduce-motion-row");
     if (reduceMotionRow) {
         const buttons = reduceMotionRow.querySelectorAll(".multi-btn");
@@ -702,8 +942,10 @@ export async function initSettingsPersistence() {
             btn.addEventListener("click", () => {
                 buttons.forEach((b) => b.classList.remove("active"));
                 btn.classList.add("active");
-                
-                const indicator = reduceMotionRow.querySelector(".slide-indicator") as HTMLElement;
+
+                const indicator = reduceMotionRow.querySelector(
+                    ".slide-indicator",
+                ) as HTMLElement;
                 if (indicator) {
                     indicator.style.width = `${(btn as HTMLElement).offsetWidth}px`;
                     indicator.style.left = `${(btn as HTMLElement).offsetLeft}px`;
@@ -716,15 +958,21 @@ export async function initSettingsPersistence() {
         });
     }
 
-    initSimpleToggle("macro-live-update-trigger", "macro-live-update-toggle", async (active) => {
-        const currentOptions = await invoke<MacroRecordingOptions>("get_macro_recording_options");
-        currentOptions.record_live_preview = active;
-        const optionsJson = JSON.stringify(currentOptions);
-        await invoke("set_macro_recording_options", {
-            optionsJson,
-            options_json: optionsJson,
-        });
-    });
+    initSimpleToggle(
+        "macro-live-update-trigger",
+        "macro-live-update-toggle",
+        async (active) => {
+            const currentOptions = await invoke<MacroRecordingOptions>(
+                "get_macro_recording_options",
+            );
+            currentOptions.record_live_preview = active;
+            const optionsJson = JSON.stringify(currentOptions);
+            await invoke("set_macro_recording_options", {
+                optionsJson,
+                options_json: optionsJson,
+            });
+        },
+    );
 
     window.addEventListener(SETTINGS_CHANGED_EVENT, scheduleSave);
     window.addEventListener(ALWAYS_ON_TOP_CHANGED_EVENT, (event) => {
@@ -734,7 +982,10 @@ export async function initSettingsPersistence() {
     });
     document.addEventListener("input", () => scheduleSave());
     document.addEventListener("change", () => scheduleSave());
-    document.addEventListener("click", () => {
+    document.addEventListener("click", (event) => {
+        if ((event.target as HTMLElement | null)?.closest("#profiles-list")) {
+            return;
+        }
         window.setTimeout(() => scheduleSave(), 0);
     });
 
