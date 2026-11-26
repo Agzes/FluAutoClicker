@@ -9,6 +9,7 @@ use crate::engine::state::{
 };
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use enigo::{Enigo, Mouse, Settings};
+use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 use std::sync::atomic::Ordering;
@@ -185,6 +186,7 @@ pub async fn import_font_file(source: String) -> Result<(String, String), String
 
 const MIN_MACRO_ACTION_DURATION_MS: u32 = 1;
 const MAX_MACRO_ACTION_DURATION_MS: u32 = 3_600_000;
+const MIN_DETECTED_RECORDED_HOLD_MS: u32 = 200;
 fn clamp_u32(value: u32, min: u32, max: u32) -> u32 {
     value.clamp(min, max)
 }
@@ -1500,6 +1502,1147 @@ fn sanitize_macro_action_config(config: &mut MacroActionConfig) {
     }
 }
 
+#[derive(Debug, Clone, Deserialize, Default)]
+struct MacroBatchNumberEdit {
+    #[serde(default)]
+    mode: Option<String>,
+    #[serde(default)]
+    value: Option<f64>,
+}
+
+impl MacroBatchNumberEdit {
+    fn normalized_mode(&self) -> &str {
+        match self.mode.as_deref().map(str::trim) {
+            Some("set") => "set",
+            Some("add") => "add",
+            Some("multiply") => "multiply",
+            _ => "keep",
+        }
+    }
+
+    fn is_active(&self) -> bool {
+        self.value.is_some() && self.normalized_mode() != "keep"
+    }
+
+    fn apply_u32(&self, current: u32) -> u32 {
+        if !self.is_active() {
+            return current;
+        }
+
+        let value = self.value.unwrap_or(current as f64);
+        let next = match self.normalized_mode() {
+            "set" => value,
+            "add" => current as f64 + value,
+            "multiply" => current as f64 * value,
+            _ => return current,
+        };
+
+        next.round().clamp(0.0, u32::MAX as f64) as u32
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+struct MacroBatchSearch {
+    #[serde(default)]
+    action_type: Option<String>,
+    #[serde(default)]
+    button: Option<String>,
+    #[serde(default)]
+    mouse_action: Option<String>,
+    #[serde(default)]
+    clicks: Option<u8>,
+    #[serde(default)]
+    position: Option<String>,
+    #[serde(default)]
+    hold_min_ms: Option<u32>,
+    #[serde(default)]
+    hold_max_ms: Option<u32>,
+    #[serde(default)]
+    keyboard_action: Option<String>,
+    #[serde(default)]
+    key_pattern: Option<String>,
+    #[serde(default)]
+    move_style: Option<String>,
+    #[serde(default)]
+    sleep_min_ms: Option<u32>,
+    #[serde(default)]
+    sleep_max_ms: Option<u32>,
+    #[serde(default)]
+    scroll_direction: Option<String>,
+    #[serde(default)]
+    scroll_min_steps: Option<u32>,
+    #[serde(default)]
+    scroll_max_steps: Option<u32>,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+struct MacroBatchMouseReplace {
+    #[serde(default)]
+    button: Option<String>,
+    #[serde(default)]
+    action: Option<String>,
+    #[serde(default)]
+    hold_duration: Option<MacroBatchNumberEdit>,
+    #[serde(default)]
+    clicks: Option<u8>,
+    #[serde(default)]
+    position: Option<String>,
+    #[serde(default)]
+    x: Option<i32>,
+    #[serde(default)]
+    y: Option<i32>,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+struct MacroBatchKeyboardReplace {
+    #[serde(default)]
+    action: Option<String>,
+    #[serde(default)]
+    hold_duration: Option<MacroBatchNumberEdit>,
+    #[serde(default)]
+    key_combo: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+struct MacroBatchMoveReplace {
+    #[serde(default)]
+    style: Option<String>,
+    #[serde(default)]
+    duration_ms: Option<MacroBatchNumberEdit>,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+struct MacroBatchSleepReplace {
+    #[serde(default)]
+    duration_ms: Option<MacroBatchNumberEdit>,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+struct MacroBatchScrollReplace {
+    #[serde(default)]
+    direction: Option<String>,
+    #[serde(default)]
+    amount: Option<MacroBatchNumberEdit>,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+struct MacroBatchReplace {
+    #[serde(default)]
+    mouse: Option<MacroBatchMouseReplace>,
+    #[serde(default)]
+    keyboard: Option<MacroBatchKeyboardReplace>,
+    #[serde(default)]
+    movement: Option<MacroBatchMoveReplace>,
+    #[serde(default)]
+    sleep: Option<MacroBatchSleepReplace>,
+    #[serde(default)]
+    scroll: Option<MacroBatchScrollReplace>,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+struct MacroBatchEditRequest {
+    #[serde(default)]
+    scope: Option<String>,
+    #[serde(default)]
+    action_ids: Vec<u64>,
+    #[serde(default)]
+    dry_run: bool,
+    #[serde(default)]
+    search: MacroBatchSearch,
+    #[serde(default)]
+    replace: MacroBatchReplace,
+}
+
+fn normalized_batch_filter(value: Option<&str>) -> Option<String> {
+    value
+        .map(str::trim)
+        .map(str::to_lowercase)
+        .filter(|value| !value.is_empty() && value != "any")
+}
+
+fn normalized_batch_replace_filter(value: Option<&str>) -> Option<String> {
+    normalized_batch_filter(value).filter(|value| value != "keep")
+}
+
+fn macro_mouse_button_name(button: &MacroMouseButton) -> &'static str {
+    match button {
+        MacroMouseButton::Left => "left",
+        MacroMouseButton::Middle => "middle",
+        MacroMouseButton::Right => "right",
+        MacroMouseButton::Front => "front",
+        MacroMouseButton::Back => "back",
+    }
+}
+
+fn parse_macro_mouse_button(value: &str) -> Option<MacroMouseButton> {
+    match value.trim().to_lowercase().as_str() {
+        "left" => Some(MacroMouseButton::Left),
+        "middle" => Some(MacroMouseButton::Middle),
+        "right" => Some(MacroMouseButton::Right),
+        "front" => Some(MacroMouseButton::Front),
+        "back" => Some(MacroMouseButton::Back),
+        _ => None,
+    }
+}
+
+fn macro_mouse_action_name(action: &MacroMouseAction) -> &'static str {
+    match action {
+        MacroMouseAction::Press => "press",
+        MacroMouseAction::Hold { .. } => "hold",
+        MacroMouseAction::Down => "down",
+        MacroMouseAction::Up => "up",
+    }
+}
+
+fn macro_keyboard_action_name(action: &MacroKeyboardAction) -> &'static str {
+    match action {
+        MacroKeyboardAction::Press => "press",
+        MacroKeyboardAction::Hold { .. } => "hold",
+        MacroKeyboardAction::Down => "down",
+        MacroKeyboardAction::Up => "up",
+    }
+}
+
+fn macro_move_style_name(style: &MacroMoveStyle) -> &'static str {
+    match style {
+        MacroMoveStyle::Instant => "instant",
+        MacroMoveStyle::Linear { .. } => "linear",
+        MacroMoveStyle::Smooth { .. } => "smooth",
+    }
+}
+
+fn macro_hold_duration(action: &MacroMouseAction) -> Option<u32> {
+    match action {
+        MacroMouseAction::Hold { duration_ms } => Some(*duration_ms),
+        _ => None,
+    }
+}
+
+fn keyboard_hold_duration(action: &MacroKeyboardAction) -> Option<u32> {
+    match action {
+        MacroKeyboardAction::Hold { duration_ms } => Some(*duration_ms),
+        _ => None,
+    }
+}
+
+fn batch_range_matches(value: u32, min: Option<u32>, max: Option<u32>) -> bool {
+    min.is_none_or(|min| value >= min) && max.is_none_or(|max| value <= max)
+}
+
+fn canonical_combo(key: &str, modifiers: &[String]) -> String {
+    let mut parts: Vec<String> = modifiers
+        .iter()
+        .map(|part| normalize_batch_key_name(part))
+        .filter(|part| !part.is_empty())
+        .collect();
+    parts.sort();
+
+    let key = normalize_batch_key_name(key);
+    if !key.is_empty() {
+        parts.push(key);
+    }
+
+    parts.join("+")
+}
+
+fn raw_combo(key: &str, modifiers: &[String]) -> String {
+    let mut parts: Vec<String> = modifiers
+        .iter()
+        .map(|part| part.trim().to_lowercase())
+        .filter(|part| !part.is_empty())
+        .collect();
+    parts.push(key.trim().to_lowercase());
+    parts.join("+")
+}
+
+fn canonicalize_combo_pattern(pattern: &str) -> String {
+    let normalized = pattern.trim().to_lowercase();
+    let mut modifiers: Vec<String> = Vec::new();
+    let mut keys: Vec<String> = Vec::new();
+
+    for part in normalized
+        .split('+')
+        .map(str::trim)
+        .filter(|part| !part.is_empty())
+    {
+        let part = normalize_batch_key_name(part);
+        if matches!(part.as_str(), "ctrl" | "shift" | "alt" | "win") {
+            modifiers.push(part);
+        } else {
+            keys.push(part);
+        }
+    }
+
+    modifiers.sort();
+    modifiers.extend(keys);
+    modifiers.join("+")
+}
+
+fn glob_match(pattern: &str, text: &str) -> bool {
+    let pattern: Vec<char> = pattern.to_lowercase().chars().collect();
+    let text: Vec<char> = text.to_lowercase().chars().collect();
+
+    let mut pattern_index = 0;
+    let mut text_index = 0;
+    let mut star_index: Option<usize> = None;
+    let mut star_text_index = 0;
+
+    while text_index < text.len() {
+        if pattern_index < pattern.len()
+            && (pattern[pattern_index] == '?' || pattern[pattern_index] == text[text_index])
+        {
+            pattern_index += 1;
+            text_index += 1;
+        } else if pattern_index < pattern.len() && pattern[pattern_index] == '*' {
+            star_index = Some(pattern_index);
+            star_text_index = text_index;
+            pattern_index += 1;
+        } else if let Some(star) = star_index {
+            pattern_index = star + 1;
+            star_text_index += 1;
+            text_index = star_text_index;
+        } else {
+            return false;
+        }
+    }
+
+    while pattern_index < pattern.len() && pattern[pattern_index] == '*' {
+        pattern_index += 1;
+    }
+
+    pattern_index == pattern.len()
+}
+
+fn matches_batch_search(config: &MacroActionConfig, search: &MacroBatchSearch) -> bool {
+    let type_filter = normalized_batch_filter(search.action_type.as_deref());
+    let type_matches = match type_filter.as_deref() {
+        None => true,
+        Some("mouse") => matches!(config, MacroActionConfig::Mouse { .. }),
+        Some("move") => matches!(config, MacroActionConfig::Move { .. }),
+        Some("keyboard") => matches!(config, MacroActionConfig::Keyboard { .. }),
+        Some("sleep") => matches!(config, MacroActionConfig::Sleep { .. }),
+        Some("scroll") => matches!(config, MacroActionConfig::Scroll { .. }),
+        Some("raw_move") => matches!(config, MacroActionConfig::RawMove { .. }),
+        Some(_) => false,
+    };
+
+    if !type_matches {
+        return false;
+    }
+
+    match config {
+        MacroActionConfig::Mouse {
+            button,
+            action,
+            position,
+            clicks,
+        } => {
+            if let Some(filter) = normalized_batch_filter(search.button.as_deref()) {
+                if macro_mouse_button_name(button) != filter {
+                    return false;
+                }
+            }
+
+            if let Some(filter) = normalized_batch_filter(search.mouse_action.as_deref()) {
+                let expected = if filter == "click" {
+                    "press"
+                } else {
+                    filter.as_str()
+                };
+                if macro_mouse_action_name(action) != expected {
+                    return false;
+                }
+            }
+
+            if let Some(clicks_filter) = search.clicks {
+                if clicks_filter > 0 && *clicks != clicks_filter {
+                    return false;
+                }
+            }
+
+            if let Some(filter) = normalized_batch_filter(search.position.as_deref()) {
+                let current = if position.is_some() {
+                    "custom"
+                } else {
+                    "current"
+                };
+                if current != filter {
+                    return false;
+                }
+            }
+
+            if search.hold_min_ms.is_some() || search.hold_max_ms.is_some() {
+                let Some(duration) = macro_hold_duration(action) else {
+                    return false;
+                };
+                if !batch_range_matches(duration, search.hold_min_ms, search.hold_max_ms) {
+                    return false;
+                }
+            }
+
+            true
+        }
+        MacroActionConfig::Keyboard {
+            key,
+            text,
+            modifiers,
+            action,
+        } => {
+            if let Some(filter) = normalized_batch_filter(search.keyboard_action.as_deref()) {
+                let expected = if filter == "click" {
+                    "press"
+                } else {
+                    filter.as_str()
+                };
+                if macro_keyboard_action_name(action) != expected {
+                    return false;
+                }
+            }
+
+            if let Some(pattern) = search
+                .key_pattern
+                .as_deref()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+            {
+                let combo = canonical_combo(key, modifiers);
+                let combo_raw = raw_combo(key, modifiers);
+                let pattern_canonical = canonicalize_combo_pattern(pattern);
+                let matches = glob_match(pattern, &combo_raw)
+                    || glob_match(pattern, &combo)
+                    || glob_match(&pattern_canonical, &combo)
+                    || glob_match(&pattern_canonical, &combo_raw)
+                    || text
+                        .as_deref()
+                        .is_some_and(|value| glob_match(pattern, value));
+
+                if !matches {
+                    return false;
+                }
+            }
+
+            if search.hold_min_ms.is_some() || search.hold_max_ms.is_some() {
+                let Some(duration) = keyboard_hold_duration(action) else {
+                    return false;
+                };
+                if !batch_range_matches(duration, search.hold_min_ms, search.hold_max_ms) {
+                    return false;
+                }
+            }
+
+            true
+        }
+        MacroActionConfig::Move { style, .. } => {
+            if let Some(filter) = normalized_batch_filter(search.move_style.as_deref()) {
+                if macro_move_style_name(style) != filter {
+                    return false;
+                }
+            }
+
+            true
+        }
+        MacroActionConfig::Sleep { duration_ms } => {
+            batch_range_matches(*duration_ms, search.sleep_min_ms, search.sleep_max_ms)
+        }
+        MacroActionConfig::Scroll { clicks } => {
+            if let Some(filter) = normalized_batch_filter(search.scroll_direction.as_deref()) {
+                let current = if *clicks < 0 { "down" } else { "up" };
+                if current != filter {
+                    return false;
+                }
+            }
+
+            batch_range_matches(
+                clicks.unsigned_abs(),
+                search.scroll_min_steps,
+                search.scroll_max_steps,
+            )
+        }
+        MacroActionConfig::RawMove { .. } => true,
+    }
+}
+
+fn normalize_batch_key_name(value: &str) -> String {
+    match value.trim().to_lowercase().as_str() {
+        "esc" => "escape".to_string(),
+        "return" => "enter".to_string(),
+        "pgup" | "page_up" => "pageup".to_string(),
+        "pgdn" | "page_down" => "pagedown".to_string(),
+        "del" => "delete".to_string(),
+        "ins" => "insert".to_string(),
+        "arrowup" | "uparrow" => "up".to_string(),
+        "arrowdown" | "downarrow" => "down".to_string(),
+        "arrowleft" | "leftarrow" => "left".to_string(),
+        "arrowright" | "rightarrow" => "right".to_string(),
+        "control" => "ctrl".to_string(),
+        "meta" | "super" => "win".to_string(),
+        other => other.to_string(),
+    }
+}
+
+fn parse_batch_key_combo(raw: &str) -> (String, Vec<String>) {
+    let mut modifiers: Vec<String> = Vec::new();
+    let mut key = String::from("a");
+
+    for token in raw.split('+') {
+        let token = normalize_batch_key_name(token);
+        if token.is_empty() {
+            continue;
+        }
+
+        if matches!(token.as_str(), "ctrl" | "shift" | "alt" | "win") {
+            if !modifiers.contains(&token) {
+                modifiers.push(token);
+            }
+        } else {
+            key = token;
+        }
+    }
+
+    (key, modifiers)
+}
+
+fn apply_batch_mouse_replace(
+    button: &mut MacroMouseButton,
+    action: &mut MacroMouseAction,
+    position: &mut Option<(i32, i32)>,
+    clicks: &mut u8,
+    replace: &MacroBatchMouseReplace,
+) {
+    if let Some(value) = replace.button.as_deref() {
+        if value.trim().to_lowercase() != "keep" {
+            if let Some(parsed) = parse_macro_mouse_button(value) {
+                *button = parsed;
+            }
+        }
+    }
+
+    if let Some(value) = replace.action.as_deref() {
+        match value.trim().to_lowercase().as_str() {
+            "press" | "click" => *action = MacroMouseAction::Press,
+            "hold" => {
+                let duration_ms = macro_hold_duration(action).unwrap_or(100);
+                *action = MacroMouseAction::Hold { duration_ms };
+            }
+            "down" => *action = MacroMouseAction::Down,
+            "up" => *action = MacroMouseAction::Up,
+            _ => {}
+        }
+    }
+
+    if let Some(duration_edit) = &replace.hold_duration {
+        if let MacroMouseAction::Hold { duration_ms } = action {
+            *duration_ms = duration_edit.apply_u32(*duration_ms);
+        }
+    }
+
+    if let Some(value) = replace.clicks {
+        if (1..=3).contains(&value) {
+            *clicks = value;
+        }
+    }
+
+    if let Some(value) = replace.position.as_deref() {
+        match value.trim().to_lowercase().as_str() {
+            "current" => *position = None,
+            "custom" => {
+                let current = *position;
+                let x = replace.x.or_else(|| current.map(|(x, _)| x)).unwrap_or(0);
+                let y = replace.y.or_else(|| current.map(|(_, y)| y)).unwrap_or(0);
+                *position = Some((x, y));
+            }
+            _ => {}
+        }
+    }
+}
+
+fn apply_batch_keyboard_replace(
+    key: &mut String,
+    text: &mut Option<String>,
+    modifiers: &mut Vec<String>,
+    action: &mut MacroKeyboardAction,
+    replace: &MacroBatchKeyboardReplace,
+) {
+    if let Some(value) = replace.action.as_deref() {
+        match value.trim().to_lowercase().as_str() {
+            "press" | "click" => *action = MacroKeyboardAction::Press,
+            "hold" => {
+                let duration_ms = keyboard_hold_duration(action).unwrap_or(50);
+                *action = MacroKeyboardAction::Hold { duration_ms };
+            }
+            "down" => *action = MacroKeyboardAction::Down,
+            "up" => *action = MacroKeyboardAction::Up,
+            _ => {}
+        }
+    }
+
+    if let Some(duration_edit) = &replace.hold_duration {
+        if let MacroKeyboardAction::Hold { duration_ms } = action {
+            *duration_ms = duration_edit.apply_u32(*duration_ms);
+        }
+    }
+
+    if let Some(combo) = replace
+        .key_combo
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        let (new_key, new_modifiers) = parse_batch_key_combo(combo);
+        *key = new_key;
+        *modifiers = new_modifiers;
+        *text = None;
+    }
+}
+
+fn apply_batch_move_replace(
+    x: i32,
+    y: i32,
+    style: &mut MacroMoveStyle,
+    replace: &MacroBatchMoveReplace,
+) {
+    if let Some(value) = replace.style.as_deref() {
+        match value.trim().to_lowercase().as_str() {
+            "instant" => *style = MacroMoveStyle::Instant,
+            "linear" => {
+                let duration_ms = match style {
+                    MacroMoveStyle::Linear { duration_ms }
+                    | MacroMoveStyle::Smooth { duration_ms, .. } => *duration_ms,
+                    MacroMoveStyle::Instant => 300,
+                };
+                *style = MacroMoveStyle::Linear { duration_ms };
+            }
+            "smooth" => {
+                let (path, duration_ms) = match style {
+                    MacroMoveStyle::Smooth { path, duration_ms } => (path.clone(), *duration_ms),
+                    MacroMoveStyle::Linear { duration_ms } => (vec![(x, y)], *duration_ms),
+                    MacroMoveStyle::Instant => (vec![(x, y)], 300),
+                };
+                *style = MacroMoveStyle::Smooth { path, duration_ms };
+            }
+            _ => {}
+        }
+    }
+
+    if let Some(duration_edit) = &replace.duration_ms {
+        match style {
+            MacroMoveStyle::Linear { duration_ms } | MacroMoveStyle::Smooth { duration_ms, .. } => {
+                *duration_ms = duration_edit.apply_u32(*duration_ms);
+            }
+            MacroMoveStyle::Instant => {}
+        }
+    }
+}
+
+fn apply_batch_scroll_replace(clicks: &mut i32, replace: &MacroBatchScrollReplace) {
+    let direction = normalized_batch_replace_filter(replace.direction.as_deref());
+    let amount_active = replace
+        .amount
+        .as_ref()
+        .is_some_and(MacroBatchNumberEdit::is_active);
+
+    if direction.is_none() && !amount_active {
+        return;
+    }
+
+    let current = *clicks;
+    let mut sign = if current < 0 { -1.0 } else { 1.0 };
+    if let Some(value) = direction.as_deref() {
+        match value {
+            "down" => sign = -1.0,
+            "up" => sign = 1.0,
+            _ => {}
+        }
+    }
+
+    let mut magnitude = if current == 0 {
+        1.0
+    } else {
+        current.unsigned_abs() as f64
+    };
+
+    if let Some(amount) = &replace.amount {
+        if amount.is_active() {
+            let value = amount.value.unwrap_or(magnitude);
+            magnitude = match amount.normalized_mode() {
+                "set" => value,
+                "add" => magnitude + value,
+                "multiply" => magnitude * value,
+                _ => magnitude,
+            };
+        }
+    }
+
+    let magnitude = magnitude.round().clamp(1.0, i32::MAX as f64) as i32;
+    *clicks = if sign < 0.0 { -magnitude } else { magnitude };
+}
+
+#[derive(Debug, Clone, Copy)]
+struct MacroHoldSequenceMatch {
+    sleep_index: Option<usize>,
+    up_index: usize,
+}
+
+fn search_wants_mouse_hold_sequences(
+    search: &MacroBatchSearch,
+    replace: &MacroBatchReplace,
+) -> bool {
+    let type_filter = normalized_batch_filter(search.action_type.as_deref());
+    if !matches!(type_filter.as_deref(), None | Some("mouse")) {
+        return false;
+    }
+
+    let action_filter = normalized_batch_filter(search.mouse_action.as_deref());
+    if action_filter.as_deref() == Some("hold") {
+        return true;
+    }
+    if action_filter.is_some() {
+        return false;
+    }
+
+    if search.hold_min_ms.is_some() || search.hold_max_ms.is_some() {
+        return true;
+    }
+
+    let mouse_replace = replace.mouse.as_ref();
+    let changes_action_kind = mouse_replace
+        .and_then(|mouse| mouse.action.as_deref())
+        .map(str::trim)
+        .map(str::to_lowercase)
+        .is_some_and(|value| !value.is_empty() && value != "keep" && value != "any");
+
+    if changes_action_kind {
+        return true;
+    }
+
+    mouse_replace
+        .and_then(|mouse| mouse.hold_duration.as_ref())
+        .is_some_and(MacroBatchNumberEdit::is_active)
+}
+
+fn recorded_hold_min_ms(search: &MacroBatchSearch) -> u32 {
+    if let Some(min) = search.hold_min_ms {
+        return min;
+    }
+    if search.hold_max_ms.is_some() {
+        return 0;
+    }
+    MIN_DETECTED_RECORDED_HOLD_MS
+}
+
+fn search_requires_hold_duration_threshold(
+    search: &MacroBatchSearch,
+    replace: &MacroBatchReplace,
+) -> bool {
+    let action_filter = normalized_batch_filter(search.mouse_action.as_deref());
+    if action_filter.as_deref() == Some("hold")
+        || search.hold_min_ms.is_some()
+        || search.hold_max_ms.is_some()
+    {
+        return true;
+    }
+
+    replace
+        .mouse
+        .as_ref()
+        .and_then(|mouse| mouse.hold_duration.as_ref())
+        .is_some_and(MacroBatchNumberEdit::is_active)
+}
+
+fn find_hold_sequence(actions: &[MacroAction], start: usize) -> Option<MacroHoldSequenceMatch> {
+    let MacroActionConfig::Mouse {
+        button,
+        action: MacroMouseAction::Down,
+        ..
+    } = &actions.get(start)?.config
+    else {
+        return None;
+    };
+
+    let mut cursor = start + 1;
+    let sleep_index = if matches!(
+        actions.get(cursor).map(|action| &action.config),
+        Some(MacroActionConfig::Sleep { .. })
+    ) {
+        let index = cursor;
+        cursor += 1;
+        Some(index)
+    } else {
+        None
+    };
+
+    match actions.get(cursor).map(|action| &action.config) {
+        Some(MacroActionConfig::Mouse {
+            button: up_button,
+            action: MacroMouseAction::Up,
+            ..
+        }) if up_button == button => Some(MacroHoldSequenceMatch {
+            sleep_index,
+            up_index: cursor,
+        }),
+        _ => None,
+    }
+}
+
+fn matches_batch_hold_sequence(
+    down: &MacroActionConfig,
+    up: &MacroActionConfig,
+    sleep: Option<&MacroActionConfig>,
+    search: &MacroBatchSearch,
+    require_duration_threshold: bool,
+) -> bool {
+    let (
+        MacroActionConfig::Mouse {
+            button,
+            action: MacroMouseAction::Down,
+            position,
+            clicks,
+        },
+        MacroActionConfig::Mouse {
+            button: up_button,
+            action: MacroMouseAction::Up,
+            position: up_position,
+            ..
+        },
+    ) = (down, up)
+    else {
+        return false;
+    };
+
+    if button != up_button {
+        return false;
+    }
+
+    if let Some(filter) = normalized_batch_filter(search.button.as_deref()) {
+        if macro_mouse_button_name(button) != filter {
+            return false;
+        }
+    }
+
+    if let Some(filter) = normalized_batch_filter(search.position.as_deref()) {
+        let down_mode = if position.is_some() {
+            "custom"
+        } else {
+            "current"
+        };
+        let up_mode = if up_position.is_some() {
+            "custom"
+        } else {
+            "current"
+        };
+        if down_mode != filter || up_mode != filter {
+            return false;
+        }
+    }
+
+    if let Some(clicks_filter) = search.clicks {
+        if clicks_filter > 0 && *clicks != clicks_filter {
+            return false;
+        }
+    }
+
+    let duration = match sleep {
+        Some(MacroActionConfig::Sleep { duration_ms }) => *duration_ms,
+        _ => 0,
+    };
+
+    if require_duration_threshold {
+        batch_range_matches(
+            duration,
+            Some(recorded_hold_min_ms(search)),
+            search.hold_max_ms,
+        )
+    } else {
+        true
+    }
+}
+
+fn apply_batch_mouse_sequence_part(
+    config: &mut MacroActionConfig,
+    replace: &MacroBatchMouseReplace,
+) {
+    let MacroActionConfig::Mouse {
+        button,
+        position,
+        clicks,
+        ..
+    } = config
+    else {
+        return;
+    };
+
+    if let Some(value) = replace.button.as_deref() {
+        if value.trim().to_lowercase() != "keep" {
+            if let Some(parsed) = parse_macro_mouse_button(value) {
+                *button = parsed;
+            }
+        }
+    }
+
+    if let Some(value) = replace.clicks {
+        if (1..=3).contains(&value) {
+            *clicks = value;
+        }
+    }
+
+    if let Some(value) = replace.position.as_deref() {
+        match value.trim().to_lowercase().as_str() {
+            "current" => *position = None,
+            "custom" => {
+                let current = *position;
+                let x = replace.x.or_else(|| current.map(|(x, _)| x)).unwrap_or(0);
+                let y = replace.y.or_else(|| current.map(|(_, y)| y)).unwrap_or(0);
+                *position = Some((x, y));
+            }
+            _ => {}
+        }
+    }
+}
+
+fn prepare_hold_sequence_edit(
+    actions: &[MacroAction],
+    down_index: usize,
+    sequence: MacroHoldSequenceMatch,
+    replace: &MacroBatchReplace,
+    replacements: &mut Vec<(usize, MacroActionConfig)>,
+    insertions: &mut Vec<(usize, u32)>,
+) -> bool {
+    let Some(mouse_replace) = &replace.mouse else {
+        return false;
+    };
+
+    let mut changed = false;
+
+    for index in [down_index, sequence.up_index] {
+        let mut candidate = actions[index].config.clone();
+        apply_batch_mouse_sequence_part(&mut candidate, mouse_replace);
+        sanitize_macro_action_config(&mut candidate);
+        if candidate != actions[index].config {
+            changed = true;
+            replacements.push((index, candidate));
+        }
+    }
+
+    if let Some(duration_edit) = &mouse_replace.hold_duration {
+        if duration_edit.is_active() {
+            if let Some(sleep_index) = sequence.sleep_index {
+                let current = match &actions[sleep_index].config {
+                    MacroActionConfig::Sleep { duration_ms } => *duration_ms,
+                    _ => 0,
+                };
+                let target = duration_edit.apply_u32(current);
+                let mut candidate = actions[sleep_index].config.clone();
+                if let MacroActionConfig::Sleep { duration_ms } = &mut candidate {
+                    *duration_ms = target;
+                }
+                sanitize_macro_action_config(&mut candidate);
+                if candidate != actions[sleep_index].config {
+                    changed = true;
+                    replacements.push((sleep_index, candidate));
+                }
+            } else {
+                let target = duration_edit.apply_u32(0);
+                if target > 0 {
+                    insertions.push((
+                        down_index,
+                        clamp_u32(
+                            target,
+                            MIN_MACRO_ACTION_DURATION_MS,
+                            MAX_MACRO_ACTION_DURATION_MS,
+                        ),
+                    ));
+                    changed = true;
+                }
+            }
+        }
+    }
+
+    changed
+}
+
+fn apply_batch_replace(config: &mut MacroActionConfig, replace: &MacroBatchReplace) {
+    match config {
+        MacroActionConfig::Mouse {
+            button,
+            action,
+            position,
+            clicks,
+        } => {
+            if let Some(mouse) = &replace.mouse {
+                apply_batch_mouse_replace(button, action, position, clicks, mouse);
+            }
+        }
+        MacroActionConfig::Keyboard {
+            key,
+            text,
+            modifiers,
+            action,
+        } => {
+            if let Some(keyboard) = &replace.keyboard {
+                apply_batch_keyboard_replace(key, text, modifiers, action, keyboard);
+            }
+        }
+        MacroActionConfig::Move { x, y, style } => {
+            if let Some(movement) = &replace.movement {
+                apply_batch_move_replace(*x, *y, style, movement);
+            }
+        }
+        MacroActionConfig::Sleep { duration_ms } => {
+            if let Some(sleep) = &replace.sleep {
+                if let Some(duration_edit) = &sleep.duration_ms {
+                    *duration_ms = duration_edit.apply_u32(*duration_ms);
+                }
+            }
+        }
+        MacroActionConfig::Scroll { clicks } => {
+            if let Some(scroll) = &replace.scroll {
+                apply_batch_scroll_replace(clicks, scroll);
+            }
+        }
+        MacroActionConfig::RawMove { .. } => {}
+    }
+}
+
+#[tauri::command]
+pub async fn batch_edit_macro_actions(
+    state: State<'_, Arc<AppState>>,
+    request_json: String,
+) -> Result<serde_json::Value, String> {
+    let request: MacroBatchEditRequest = serde_json::from_str(&request_json)
+        .map_err(|error| format!("Failed to parse batch edit request: {}", error))?;
+
+    let selected_scope = request.scope.as_deref() == Some("selected");
+    let selected_ids: HashSet<u64> = request.action_ids.iter().copied().collect();
+
+    let mut actions = state.macro_engine.actions.lock().await;
+    let total = if selected_scope {
+        actions
+            .iter()
+            .filter(|action| selected_ids.contains(&action.id))
+            .count()
+    } else {
+        actions.len()
+    };
+
+    let mut matched = 0usize;
+    let mut changed = 0usize;
+    let mut replacements: Vec<(usize, MacroActionConfig)> = Vec::new();
+    let mut insertions: Vec<(usize, u32)> = Vec::new();
+    let wants_hold_sequences = search_wants_mouse_hold_sequences(&request.search, &request.replace);
+    let require_hold_duration_threshold =
+        search_requires_hold_duration_threshold(&request.search, &request.replace);
+    let mut index = 0usize;
+
+    while index < actions.len() {
+        if selected_scope && !selected_ids.contains(&actions[index].id) {
+            index += 1;
+            continue;
+        }
+
+        if wants_hold_sequences {
+            if let Some(sequence) = find_hold_sequence(&actions, index) {
+                let sequence_in_scope = !selected_scope
+                    || (selected_ids.contains(&actions[index].id)
+                        && sequence.sleep_index.is_none_or(|sleep_index| {
+                            selected_ids.contains(&actions[sleep_index].id)
+                        })
+                        && selected_ids.contains(&actions[sequence.up_index].id));
+
+                if sequence_in_scope {
+                    let sleep_config = sequence
+                        .sleep_index
+                        .map(|sleep_index| &actions[sleep_index].config);
+                    if matches_batch_hold_sequence(
+                        &actions[index].config,
+                        &actions[sequence.up_index].config,
+                        sleep_config,
+                        &request.search,
+                        require_hold_duration_threshold,
+                    ) {
+                        matched += 1;
+                        if prepare_hold_sequence_edit(
+                            &actions,
+                            index,
+                            sequence,
+                            &request.replace,
+                            &mut replacements,
+                            &mut insertions,
+                        ) {
+                            changed += 1;
+                        }
+                    }
+
+                    index = sequence.up_index + 1;
+                    continue;
+                }
+            }
+        }
+
+        if matches_batch_search(&actions[index].config, &request.search) {
+            matched += 1;
+
+            let mut candidate = actions[index].config.clone();
+            apply_batch_replace(&mut candidate, &request.replace);
+            sanitize_macro_action_config(&mut candidate);
+
+            if candidate != actions[index].config {
+                changed += 1;
+                replacements.push((index, candidate));
+            }
+        }
+
+        index += 1;
+    }
+
+    if !request.dry_run {
+        if actions.len() + insertions.len() > crate::engine::macro_engine::state::MAX_MACRO_ACTIONS
+        {
+            return Err(format!(
+                "Macro cannot contain more than {} actions.",
+                crate::engine::macro_engine::state::MAX_MACRO_ACTIONS
+            ));
+        }
+
+        for (action_index, config) in replacements {
+            actions[action_index].config = config;
+        }
+
+        insertions.sort_by(|left, right| right.0.cmp(&left.0));
+        for (after_index, duration_ms) in insertions {
+            let id = state
+                .macro_engine
+                .action_id_counter
+                .fetch_add(1, Ordering::SeqCst);
+            actions.insert(
+                after_index + 1,
+                MacroAction {
+                    id,
+                    timestamp_ms: 0,
+                    config: MacroActionConfig::Sleep { duration_ms },
+                },
+            );
+        }
+    }
+
+    let should_persist = !request.dry_run && changed > 0;
+    drop(actions);
+
+    if should_persist {
+        let actions_clone = state.macro_engine.actions.lock().await.clone();
+        let repeat_mode = state.macro_engine.repeat_mode.lock().await.clone();
+        let recording_options = state.macro_engine.recording_options.lock().await.clone();
+        tokio::spawn(async move {
+            let _ = storage::save_macro(&actions_clone, &repeat_mode, &recording_options).await;
+        });
+    }
+
+    Ok(serde_json::json!({
+        "matched": matched,
+        "changed": changed,
+        "total": total,
+    }))
+}
+
 #[tauri::command]
 pub fn set_window_acrylic(
     window: Window,
@@ -2327,6 +3470,559 @@ mod tests {
                 ..
             }
         ));
+    }
+
+    #[test]
+    fn batch_search_detects_mouse_holds_and_duration_ranges() {
+        let hold = MacroActionConfig::Mouse {
+            button: MacroMouseButton::Left,
+            action: MacroMouseAction::Hold { duration_ms: 250 },
+            position: None,
+            clicks: 1,
+        };
+        let short_hold = MacroActionConfig::Mouse {
+            button: MacroMouseButton::Left,
+            action: MacroMouseAction::Hold { duration_ms: 100 },
+            position: None,
+            clicks: 1,
+        };
+        let press = MacroActionConfig::Mouse {
+            button: MacroMouseButton::Left,
+            action: MacroMouseAction::Press,
+            position: None,
+            clicks: 1,
+        };
+
+        let search = MacroBatchSearch {
+            action_type: Some("mouse".to_string()),
+            mouse_action: Some("hold".to_string()),
+            hold_min_ms: Some(200),
+            hold_max_ms: Some(300),
+            ..Default::default()
+        };
+
+        assert!(matches_batch_search(&hold, &search));
+        assert!(!matches_batch_search(&short_hold, &search));
+        assert!(!matches_batch_search(&press, &search));
+    }
+
+    #[test]
+    fn batch_search_detects_recorded_mouse_hold_sequences() {
+        let actions = vec![
+            MacroAction {
+                id: 1,
+                timestamp_ms: 0,
+                config: MacroActionConfig::Mouse {
+                    button: MacroMouseButton::Left,
+                    action: MacroMouseAction::Down,
+                    position: Some((10, 20)),
+                    clicks: 1,
+                },
+            },
+            MacroAction {
+                id: 2,
+                timestamp_ms: 0,
+                config: MacroActionConfig::Sleep { duration_ms: 500 },
+            },
+            MacroAction {
+                id: 3,
+                timestamp_ms: 0,
+                config: MacroActionConfig::Mouse {
+                    button: MacroMouseButton::Left,
+                    action: MacroMouseAction::Up,
+                    position: Some((10, 20)),
+                    clicks: 1,
+                },
+            },
+        ];
+
+        let sequence = find_hold_sequence(&actions, 0).expect("down/sleep/up sequence");
+        assert_eq!(sequence.sleep_index, Some(1));
+        assert_eq!(sequence.up_index, 2);
+
+        let search = MacroBatchSearch {
+            action_type: Some("mouse".to_string()),
+            mouse_action: Some("hold".to_string()),
+            hold_min_ms: Some(400),
+            hold_max_ms: Some(600),
+            ..Default::default()
+        };
+        assert!(matches_batch_hold_sequence(
+            &actions[0].config,
+            &actions[2].config,
+            Some(&actions[1].config),
+            &search,
+            true
+        ));
+
+        let too_long = MacroBatchSearch {
+            hold_min_ms: Some(600),
+            ..search.clone()
+        };
+        assert!(!matches_batch_hold_sequence(
+            &actions[0].config,
+            &actions[2].config,
+            Some(&actions[1].config),
+            &too_long,
+            true
+        ));
+
+        let explicit_down_search = MacroBatchSearch {
+            mouse_action: Some("down".to_string()),
+            ..search.clone()
+        };
+        assert!(!search_wants_mouse_hold_sequences(
+            &explicit_down_search,
+            &MacroBatchReplace::default()
+        ));
+
+        let default_hold_search = MacroBatchSearch {
+            action_type: Some("mouse".to_string()),
+            mouse_action: Some("hold".to_string()),
+            ..Default::default()
+        };
+        assert!(search_wants_mouse_hold_sequences(
+            &default_hold_search,
+            &MacroBatchReplace::default()
+        ));
+        assert!(!matches_batch_hold_sequence(
+            &actions[0].config,
+            &actions[2].config,
+            Some(&MacroActionConfig::Sleep { duration_ms: 100 }),
+            &default_hold_search,
+            true
+        ));
+
+        let include_short_holds = MacroBatchSearch {
+            hold_min_ms: Some(0),
+            ..default_hold_search.clone()
+        };
+        assert!(matches_batch_hold_sequence(
+            &actions[0].config,
+            &actions[2].config,
+            Some(&MacroActionConfig::Sleep { duration_ms: 100 }),
+            &include_short_holds,
+            true
+        ));
+
+        let any_search = MacroBatchSearch {
+            action_type: Some("mouse".to_string()),
+            ..Default::default()
+        };
+        assert!(!search_wants_mouse_hold_sequences(
+            &any_search,
+            &MacroBatchReplace::default()
+        ));
+
+        let hold_edit_replace = MacroBatchReplace {
+            mouse: Some(MacroBatchMouseReplace {
+                hold_duration: Some(MacroBatchNumberEdit {
+                    mode: Some("add".to_string()),
+                    value: Some(50.0),
+                }),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        assert!(search_wants_mouse_hold_sequences(
+            &any_search,
+            &hold_edit_replace
+        ));
+
+        let action_edit_replace = MacroBatchReplace {
+            mouse: Some(MacroBatchMouseReplace {
+                action: Some("hold".to_string()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        assert!(search_wants_mouse_hold_sequences(
+            &any_search,
+            &action_edit_replace
+        ));
+        assert!(!search_requires_hold_duration_threshold(
+            &any_search,
+            &action_edit_replace
+        ));
+        assert!(matches_batch_hold_sequence(
+            &actions[0].config,
+            &actions[2].config,
+            Some(&MacroActionConfig::Sleep { duration_ms: 100 }),
+            &any_search,
+            false
+        ));
+
+        let keep_action_replace = MacroBatchReplace {
+            mouse: Some(MacroBatchMouseReplace {
+                action: Some("keep".to_string()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        assert!(!search_wants_mouse_hold_sequences(
+            &any_search,
+            &keep_action_replace
+        ));
+    }
+
+    #[test]
+    fn batch_hold_sequence_edit_updates_sleep_and_both_buttons() {
+        let mut actions = vec![
+            MacroAction {
+                id: 1,
+                timestamp_ms: 0,
+                config: MacroActionConfig::Mouse {
+                    button: MacroMouseButton::Left,
+                    action: MacroMouseAction::Down,
+                    position: None,
+                    clicks: 1,
+                },
+            },
+            MacroAction {
+                id: 2,
+                timestamp_ms: 0,
+                config: MacroActionConfig::Sleep { duration_ms: 500 },
+            },
+            MacroAction {
+                id: 3,
+                timestamp_ms: 0,
+                config: MacroActionConfig::Mouse {
+                    button: MacroMouseButton::Left,
+                    action: MacroMouseAction::Up,
+                    position: None,
+                    clicks: 1,
+                },
+            },
+        ];
+
+        let sequence = find_hold_sequence(&actions, 0).expect("down/sleep/up sequence");
+        let replace = MacroBatchReplace {
+            mouse: Some(MacroBatchMouseReplace {
+                button: Some("right".to_string()),
+                action: Some("hold".to_string()),
+                hold_duration: Some(MacroBatchNumberEdit {
+                    mode: Some("set".to_string()),
+                    value: Some(250.0),
+                }),
+                clicks: Some(2),
+                position: Some("custom".to_string()),
+                x: Some(30),
+                y: Some(40),
+            }),
+            ..Default::default()
+        };
+
+        let mut replacements = Vec::new();
+        let mut insertions = Vec::new();
+        assert!(prepare_hold_sequence_edit(
+            &actions,
+            0,
+            sequence,
+            &replace,
+            &mut replacements,
+            &mut insertions,
+        ));
+        assert!(insertions.is_empty());
+
+        for (index, config) in replacements {
+            actions[index].config = config;
+        }
+
+        assert_eq!(
+            actions[0].config,
+            MacroActionConfig::Mouse {
+                button: MacroMouseButton::Right,
+                action: MacroMouseAction::Down,
+                position: Some((30, 40)),
+                clicks: 2,
+            }
+        );
+        assert_eq!(
+            actions[1].config,
+            MacroActionConfig::Sleep { duration_ms: 250 }
+        );
+        assert_eq!(
+            actions[2].config,
+            MacroActionConfig::Mouse {
+                button: MacroMouseButton::Right,
+                action: MacroMouseAction::Up,
+                position: Some((30, 40)),
+                clicks: 2,
+            }
+        );
+    }
+
+    #[test]
+    fn batch_hold_sequence_edit_inserts_missing_sleep() {
+        let actions = vec![
+            MacroAction {
+                id: 1,
+                timestamp_ms: 0,
+                config: MacroActionConfig::Mouse {
+                    button: MacroMouseButton::Left,
+                    action: MacroMouseAction::Down,
+                    position: None,
+                    clicks: 1,
+                },
+            },
+            MacroAction {
+                id: 2,
+                timestamp_ms: 0,
+                config: MacroActionConfig::Mouse {
+                    button: MacroMouseButton::Left,
+                    action: MacroMouseAction::Up,
+                    position: None,
+                    clicks: 1,
+                },
+            },
+        ];
+
+        let sequence = find_hold_sequence(&actions, 0).expect("down/up sequence");
+        let replace = MacroBatchReplace {
+            mouse: Some(MacroBatchMouseReplace {
+                hold_duration: Some(MacroBatchNumberEdit {
+                    mode: Some("set".to_string()),
+                    value: Some(200.0),
+                }),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let mut replacements = Vec::new();
+        let mut insertions = Vec::new();
+        assert!(prepare_hold_sequence_edit(
+            &actions,
+            0,
+            sequence,
+            &replace,
+            &mut replacements,
+            &mut insertions,
+        ));
+        assert_eq!(insertions, vec![(0, 200)]);
+    }
+
+    #[test]
+    fn batch_replace_updates_mouse_holds_and_position() {
+        let mut config = MacroActionConfig::Mouse {
+            button: MacroMouseButton::Left,
+            action: MacroMouseAction::Hold { duration_ms: 100 },
+            position: None,
+            clicks: 1,
+        };
+
+        let replace = MacroBatchReplace {
+            mouse: Some(MacroBatchMouseReplace {
+                button: Some("right".to_string()),
+                action: Some("hold".to_string()),
+                hold_duration: Some(MacroBatchNumberEdit {
+                    mode: Some("add".to_string()),
+                    value: Some(50.0),
+                }),
+                clicks: Some(2),
+                position: Some("custom".to_string()),
+                x: Some(10),
+                y: Some(20),
+            }),
+            ..Default::default()
+        };
+
+        apply_batch_replace(&mut config, &replace);
+        sanitize_macro_action_config(&mut config);
+
+        assert_eq!(
+            config,
+            MacroActionConfig::Mouse {
+                button: MacroMouseButton::Right,
+                action: MacroMouseAction::Hold { duration_ms: 150 },
+                position: Some((10, 20)),
+                clicks: 2,
+            }
+        );
+    }
+
+    #[test]
+    fn batch_replace_converts_keyboard_press_to_hold_combo() {
+        let mut config = MacroActionConfig::Keyboard {
+            key: "a".to_string(),
+            text: Some("recorded".to_string()),
+            modifiers: Vec::new(),
+            action: MacroKeyboardAction::Press,
+        };
+
+        let replace = MacroBatchReplace {
+            keyboard: Some(MacroBatchKeyboardReplace {
+                action: Some("hold".to_string()),
+                hold_duration: Some(MacroBatchNumberEdit {
+                    mode: Some("set".to_string()),
+                    value: Some(250.0),
+                }),
+                key_combo: Some("ctrl+shift+b".to_string()),
+            }),
+            ..Default::default()
+        };
+
+        apply_batch_replace(&mut config, &replace);
+        sanitize_macro_action_config(&mut config);
+
+        assert_eq!(
+            config,
+            MacroActionConfig::Keyboard {
+                key: "b".to_string(),
+                text: None,
+                modifiers: vec!["ctrl".to_string(), "shift".to_string()],
+                action: MacroKeyboardAction::Hold { duration_ms: 250 },
+            }
+        );
+    }
+
+    #[test]
+    fn batch_search_matches_keyboard_wildcards_and_hold_ranges() {
+        let config = MacroActionConfig::Keyboard {
+            key: "s".to_string(),
+            text: None,
+            modifiers: vec!["shift".to_string(), "ctrl".to_string()],
+            action: MacroKeyboardAction::Hold { duration_ms: 500 },
+        };
+
+        let search = MacroBatchSearch {
+            action_type: Some("keyboard".to_string()),
+            keyboard_action: Some("hold".to_string()),
+            key_pattern: Some("*+s".to_string()),
+            hold_min_ms: Some(400),
+            hold_max_ms: Some(600),
+            ..Default::default()
+        };
+        assert!(matches_batch_search(&config, &search));
+
+        let wrong_combo = MacroBatchSearch {
+            key_pattern: Some("alt+*".to_string()),
+            ..search.clone()
+        };
+        assert!(!matches_batch_search(&config, &wrong_combo));
+
+        let reordered_modifiers = MacroBatchSearch {
+            key_pattern: Some("shift+ctrl+s".to_string()),
+            hold_min_ms: None,
+            hold_max_ms: None,
+            ..search
+        };
+        assert!(matches_batch_search(&config, &reordered_modifiers));
+
+        let escape_config = MacroActionConfig::Keyboard {
+            key: "escape".to_string(),
+            text: None,
+            modifiers: Vec::new(),
+            action: MacroKeyboardAction::Press,
+        };
+        let escape_search = MacroBatchSearch {
+            action_type: Some("keyboard".to_string()),
+            key_pattern: Some("esc".to_string()),
+            ..Default::default()
+        };
+        assert!(matches_batch_search(&escape_config, &escape_search));
+    }
+
+    #[test]
+    fn batch_scroll_replace_preserves_or_flips_direction() {
+        let replace_down = MacroBatchScrollReplace {
+            direction: Some("down".to_string()),
+            amount: Some(MacroBatchNumberEdit {
+                mode: Some("multiply".to_string()),
+                value: Some(2.0),
+            }),
+        };
+        let mut clicks = 5;
+        apply_batch_scroll_replace(&mut clicks, &replace_down);
+        assert_eq!(clicks, -10);
+
+        let replace_up = MacroBatchScrollReplace {
+            direction: Some("up".to_string()),
+            amount: Some(MacroBatchNumberEdit {
+                mode: Some("set".to_string()),
+                value: Some(3.0),
+            }),
+        };
+        let mut clicks = -5;
+        apply_batch_scroll_replace(&mut clicks, &replace_up);
+        assert_eq!(clicks, 3);
+
+        let replace_keep = MacroBatchScrollReplace {
+            direction: Some("keep".to_string()),
+            amount: Some(MacroBatchNumberEdit {
+                mode: Some("keep".to_string()),
+                value: Some(10.0),
+            }),
+        };
+        let mut clicks = 0;
+        apply_batch_scroll_replace(&mut clicks, &replace_keep);
+        assert_eq!(clicks, 0);
+    }
+
+    #[test]
+    fn batch_request_deserializes_frontend_payload() {
+        let request: MacroBatchEditRequest = serde_json::from_str(
+            r#"{
+                "scope": "selected",
+                "action_ids": [2, 4],
+                "dry_run": true,
+                "search": {
+                    "action_type": "mouse",
+                    "button": "left",
+                    "mouse_action": "hold",
+                    "hold_min_ms": 100,
+                    "hold_max_ms": 500
+                },
+                "replace": {
+                    "mouse": {
+                        "button": "right",
+                        "action": "hold",
+                        "hold_duration": { "mode": "add", "value": 50 },
+                        "clicks": 2,
+                        "position": "custom",
+                        "x": 10,
+                        "y": 20
+                    }
+                }
+            }"#,
+        )
+        .expect("frontend batch payload should deserialize");
+
+        assert_eq!(request.scope.as_deref(), Some("selected"));
+        assert_eq!(request.action_ids, vec![2, 4]);
+        assert!(request.dry_run);
+        assert_eq!(request.search.hold_min_ms, Some(100));
+        assert_eq!(request.search.hold_max_ms, Some(500));
+
+        let mouse = request.replace.mouse.expect("mouse replacements");
+        assert_eq!(mouse.button.as_deref(), Some("right"));
+        assert_eq!(mouse.action.as_deref(), Some("hold"));
+        assert_eq!(mouse.hold_duration.and_then(|edit| edit.value), Some(50.0));
+        assert_eq!(mouse.position.as_deref(), Some("custom"));
+    }
+
+    #[test]
+    fn batch_number_edit_supports_set_add_and_multiply() {
+        let set = MacroBatchNumberEdit {
+            mode: Some("set".to_string()),
+            value: Some(250.0),
+        };
+        assert_eq!(set.apply_u32(100), 250);
+
+        let add = MacroBatchNumberEdit {
+            mode: Some("add".to_string()),
+            value: Some(25.0),
+        };
+        assert_eq!(add.apply_u32(100), 125);
+
+        let multiply = MacroBatchNumberEdit {
+            mode: Some("multiply".to_string()),
+            value: Some(1.5),
+        };
+        assert_eq!(multiply.apply_u32(100), 150);
+
+        let keep = MacroBatchNumberEdit::default();
+        assert_eq!(keep.apply_u32(100), 100);
     }
 
     #[test]

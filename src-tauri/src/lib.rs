@@ -922,6 +922,7 @@ pub fn run() {
             remove_macro_actions,
             duplicate_macro_action,
             duplicate_macro_actions,
+            batch_edit_macro_actions,
             reorder_macro_actions,
             clear_macros,
             toggle_macro_player,

@@ -78,6 +78,7 @@ const DRAWER_TITLE_KEYS: Record<string, string> = {
     "Mouse Jiggler": "jiggler.section_title",
     "Add Macro Action": "macro.add_action",
     "Edit Macro Action": "macro.edit_action",
+    "Batch Edit": "macro.batch.title",
     "Recording Filters": "macro.recording_filters",
     General: "settings.group.general",
     Utils: "settings.group.utils",
@@ -440,19 +441,32 @@ export function initJiggler() {
     const intervalInput = document.getElementById(
         "jiggler-interval-input",
     ) as HTMLInputElement | null;
-    const setIntervalValue = (value: number, updateInput: boolean, updateSlider: boolean) => {
+    const setIntervalValue = (
+        value: number,
+        updateInput: boolean,
+        updateSlider: boolean,
+    ) => {
         const clamped = Math.min(300000, Math.max(100, Math.round(value)));
-        if (updateSlider && intervalSlider) intervalSlider.value = String(clamped);
+        if (updateSlider && intervalSlider)
+            intervalSlider.value = String(clamped);
         if (updateInput && intervalInput) intervalInput.value = String(clamped);
         invoke("set_jiggler_interval", { interval: clamped });
     };
 
     intervalSlider?.addEventListener("input", () => {
         updateSliderFill(intervalSlider);
-        setIntervalValue(Number.parseInt(intervalSlider.value, 10) || 100, true, false);
+        setIntervalValue(
+            Number.parseInt(intervalSlider.value, 10) || 100,
+            true,
+            false,
+        );
     });
     intervalInput?.addEventListener("change", () => {
-        setIntervalValue(Number.parseInt(intervalInput.value, 10) || 100, false, true);
+        setIntervalValue(
+            Number.parseInt(intervalInput.value, 10) || 100,
+            false,
+            true,
+        );
     });
 
     const distanceSlider = document.getElementById(
@@ -461,9 +475,14 @@ export function initJiggler() {
     const distanceInput = document.getElementById(
         "jiggler-distance-input",
     ) as HTMLInputElement | null;
-    const setDistanceValue = (value: number, updateInput: boolean, updateSlider: boolean) => {
+    const setDistanceValue = (
+        value: number,
+        updateInput: boolean,
+        updateSlider: boolean,
+    ) => {
         const clamped = Math.min(500, Math.max(5, Math.round(value)));
-        if (updateSlider && distanceSlider) distanceSlider.value = String(clamped);
+        if (updateSlider && distanceSlider)
+            distanceSlider.value = String(clamped);
         if (updateInput && distanceInput) distanceInput.value = String(clamped);
         invoke("set_jiggler_distance", { distance: clamped });
         window.requestAnimationFrame(() =>
@@ -473,10 +492,18 @@ export function initJiggler() {
 
     distanceSlider?.addEventListener("input", () => {
         updateSliderFill(distanceSlider);
-        setDistanceValue(Number.parseInt(distanceSlider.value, 10) || 5, true, false);
+        setDistanceValue(
+            Number.parseInt(distanceSlider.value, 10) || 5,
+            true,
+            false,
+        );
     });
     distanceInput?.addEventListener("change", () => {
-        setDistanceValue(Number.parseInt(distanceInput.value, 10) || 5, false, true);
+        setDistanceValue(
+            Number.parseInt(distanceInput.value, 10) || 5,
+            false,
+            true,
+        );
     });
 
     void listen("jiggler-status-changed", (event) => {

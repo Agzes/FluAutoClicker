@@ -28,13 +28,17 @@ export function getMacroDurationMs(actions: MacroBackendAction[]): number {
             const style = config.style;
             if (style && typeof style === "object") {
                 if ("linear" in style) {
-                    const linear = (style as { linear?: { duration_ms?: unknown } }).linear;
+                    const linear = (
+                        style as { linear?: { duration_ms?: unknown } }
+                    ).linear;
                     const duration = Number(linear?.duration_ms);
                     if (Number.isFinite(duration)) {
                         totalMs += duration;
                     }
                 } else if ("smooth" in style) {
-                    const smooth = (style as { smooth?: { duration_ms?: unknown } }).smooth;
+                    const smooth = (
+                        style as { smooth?: { duration_ms?: unknown } }
+                    ).smooth;
                     const duration = Number(smooth?.duration_ms);
                     if (Number.isFinite(duration)) {
                         totalMs += duration;
@@ -47,7 +51,6 @@ export function getMacroDurationMs(actions: MacroBackendAction[]): number {
     }
     return totalMs;
 }
-
 
 type DropPosition = "before" | "after";
 
@@ -71,8 +74,12 @@ function getListContainer() {
 }
 
 function bindPointerDragListeners() {
-    window.addEventListener("pointermove", handlePointerDragMove, { passive: false });
-    window.addEventListener("pointerup", handlePointerDragEnd, { passive: false });
+    window.addEventListener("pointermove", handlePointerDragMove, {
+        passive: false,
+    });
+    window.addEventListener("pointerup", handlePointerDragEnd, {
+        passive: false,
+    });
     window.addEventListener("pointercancel", handlePointerDragCancel);
 }
 
@@ -88,7 +95,9 @@ function getActionItems() {
         return [];
     }
 
-    return Array.from(listContainer.querySelectorAll<HTMLElement>(".macro-action-item"));
+    return Array.from(
+        listContainer.querySelectorAll<HTMLElement>(".macro-action-item"),
+    );
 }
 
 function getActionIdFromElement(element: HTMLElement | null) {
@@ -97,7 +106,10 @@ function getActionIdFromElement(element: HTMLElement | null) {
     return Number.isFinite(id) ? id : null;
 }
 
-function getDropPosition(item: HTMLElement, pointer: { clientY: number }): DropPosition {
+function getDropPosition(
+    item: HTMLElement,
+    pointer: { clientY: number },
+): DropPosition {
     const rect = item.getBoundingClientRect();
     return pointer.clientY > rect.top + rect.height / 2 ? "after" : "before";
 }
@@ -108,8 +120,9 @@ function getDropTarget(clientY: number) {
         return null;
     }
 
-    const items = getActionItems()
-        .filter((item) => getActionIdFromElement(item) !== pointerDragState?.actionId);
+    const items = getActionItems().filter(
+        (item) => getActionIdFromElement(item) !== pointerDragState?.actionId,
+    );
 
     if (items.length === 0) {
         return null;
@@ -165,7 +178,7 @@ function animateActionLayoutChange(updateLayout: () => void) {
             {
                 duration: 160,
                 easing: "cubic-bezier(0.16, 1, 0.3, 1)",
-            }
+            },
         );
     });
 }
@@ -206,7 +219,9 @@ function getVisibleActionOrder() {
         return [];
     }
 
-    return Array.from(listContainer.querySelectorAll<HTMLElement>(".macro-action-item"))
+    return Array.from(
+        listContainer.querySelectorAll<HTMLElement>(".macro-action-item"),
+    )
         .map((item) => getActionIdFromElement(item))
         .filter((id): id is number => id !== null);
 }
@@ -256,11 +271,17 @@ function handlePointerDragCancel(event: PointerEvent) {
     finishPointerDrag(false);
 }
 
-async function persistActionOrder(actionIds: number[], previousActions: MacroUiAction[]) {
+async function persistActionOrder(
+    actionIds: number[],
+    previousActions: MacroUiAction[],
+) {
     const requestSerial = ++reorderRequestSerial;
 
     try {
-        await invoke("reorder_macro_actions", { actionIds, action_ids: actionIds });
+        await invoke("reorder_macro_actions", {
+            actionIds,
+            action_ids: actionIds,
+        });
     } catch (error) {
         console.error("Failed to reorder macro actions", error);
         if (requestSerial === reorderRequestSerial) {
@@ -284,7 +305,9 @@ function applyVisibleActionOrder(previousActions: MacroUiAction[]) {
         return;
     }
 
-    const actionsById = new Map(previousActions.map((action) => [action.id, action]));
+    const actionsById = new Map(
+        previousActions.map((action) => [action.id, action]),
+    );
     const nextActions = visibleOrder
         .map((id) => actionsById.get(id))
         .filter((action): action is MacroUiAction => Boolean(action));
@@ -295,7 +318,9 @@ function applyVisibleActionOrder(previousActions: MacroUiAction[]) {
     }
 
     macroState.actions = nextActions;
-    const rawActionsById = new Map(macroState.rawActions.map((action) => [Number(action.id), action]));
+    const rawActionsById = new Map(
+        macroState.rawActions.map((action) => [Number(action.id), action]),
+    );
     macroState.rawActions = visibleOrder
         .map((id) => rawActionsById.get(id))
         .filter((action): action is MacroBackendAction => Boolean(action));
@@ -308,26 +333,58 @@ function updateSelectionBar() {
     const bar = document.getElementById("selection-bar");
     if (!bar) return;
 
-    const activeMode = document.querySelector<HTMLElement>(".mode-tabs .tab.active")?.dataset.tab;
+    const activeMode = document.querySelector<HTMLElement>(
+        ".mode-tabs .tab.active",
+    )?.dataset.tab;
     if (activeMode !== "macro") {
         bar.classList.remove("visible");
         return;
     }
 
     const text = document.getElementById("selection-bar-text");
-    const play = document.getElementById("selection-bar-play") as HTMLButtonElement | null;
-    const copy = document.getElementById("selection-bar-copy") as HTMLButtonElement | null;
-    const paste = document.getElementById("selection-bar-paste") as HTMLButtonElement | null;
-    const duplicate = document.getElementById("selection-bar-duplicate") as HTMLButtonElement | null;
-    const up = document.getElementById("selection-bar-up") as HTMLButtonElement | null;
-    const down = document.getElementById("selection-bar-down") as HTMLButtonElement | null;
-    const remove = document.getElementById("selection-bar-delete") as HTMLButtonElement | null;
-    const cancel = document.getElementById("selection-bar-cancel") as HTMLButtonElement | null;
-    if (!bar || !text || !play || !copy || !paste || !duplicate || !up || !down || !remove || !cancel) return;
+    const play = document.getElementById(
+        "selection-bar-play",
+    ) as HTMLButtonElement | null;
+    const copy = document.getElementById(
+        "selection-bar-copy",
+    ) as HTMLButtonElement | null;
+    const paste = document.getElementById(
+        "selection-bar-paste",
+    ) as HTMLButtonElement | null;
+    const duplicate = document.getElementById(
+        "selection-bar-duplicate",
+    ) as HTMLButtonElement | null;
+    const up = document.getElementById(
+        "selection-bar-up",
+    ) as HTMLButtonElement | null;
+    const down = document.getElementById(
+        "selection-bar-down",
+    ) as HTMLButtonElement | null;
+    const remove = document.getElementById(
+        "selection-bar-delete",
+    ) as HTMLButtonElement | null;
+    const cancel = document.getElementById(
+        "selection-bar-cancel",
+    ) as HTMLButtonElement | null;
+    if (
+        !bar ||
+        !text ||
+        !play ||
+        !copy ||
+        !paste ||
+        !duplicate ||
+        !up ||
+        !down ||
+        !remove ||
+        !cancel
+    )
+        return;
 
     const setCancelMode = (clipboard: boolean) => {
         const key = clipboard ? "macro.clear" : "macro.cancel";
-        const label = clipboard ? t("macro.clear", "Clear") : t("macro.cancel", "CANCEL");
+        const label = clipboard
+            ? t("macro.clear", "Clear")
+            : t("macro.cancel", "CANCEL");
         cancel.innerHTML = `<span class="icon">${clipboard ? "&#57742;" : "&#57778;"}</span>`;
         cancel.dataset.i18nTitle = key;
         cancel.title = label;
@@ -337,9 +394,13 @@ function updateSelectionBar() {
     const count = selectedActionIds.size;
     if (count > 0) {
         bar.classList.add("visible");
-        text.textContent = t("macro.selection_count", "Selected actions: {count}", {
-            count: String(count),
-        });
+        text.textContent = t(
+            "macro.selection_count",
+            "Selected actions: {count}",
+            {
+                count: String(count),
+            },
+        );
         play.hidden = false;
         copy.hidden = false;
         paste.hidden = copiedActionJsons.length === 0;
@@ -351,7 +412,9 @@ function updateSelectionBar() {
         const ordered = orderedActionIds();
         const selected = ordered.filter((id) => selectedActionIds.has(id));
         up.disabled = ordered.indexOf(selected[0]) <= 0;
-        down.disabled = ordered.indexOf(selected[selected.length - 1]) >= ordered.length - 1;
+        down.disabled =
+            ordered.indexOf(selected[selected.length - 1]) >=
+            ordered.length - 1;
         setCancelMode(false);
         return;
     }
@@ -376,18 +439,24 @@ function updateSelectionBar() {
 }
 
 function initSelectionBar() {
-    document.getElementById("selection-bar-play")?.addEventListener("click", () => {
-        const ids = selectionInListOrder();
-        if (ids.length === 0) return;
+    document
+        .getElementById("selection-bar-play")
+        ?.addEventListener("click", () => {
+            const ids = selectionInListOrder();
+            if (ids.length === 0) return;
 
-        void invoke("play_macro_actions", {
-            actionIds: ids,
-            action_ids: ids,
-        }).catch((error) => {
-            console.error("Failed to play selected macro actions", error);
-            notify(error instanceof Error ? error.message : String(error), "error", 3200);
+            void invoke("play_macro_actions", {
+                actionIds: ids,
+                action_ids: ids,
+            }).catch((error) => {
+                console.error("Failed to play selected macro actions", error);
+                notify(
+                    error instanceof Error ? error.message : String(error),
+                    "error",
+                    3200,
+                );
+            });
         });
-    });
 
     document
         .getElementById("selection-bar-copy")
@@ -397,7 +466,10 @@ function initSelectionBar() {
         ?.addEventListener("click", () => void pasteCopiedActions());
     document
         .getElementById("selection-bar-duplicate")
-        ?.addEventListener("click", () => void duplicateActions(selectionInListOrder()));
+        ?.addEventListener(
+            "click",
+            () => void duplicateActions(selectionInListOrder()),
+        );
     document
         .getElementById("selection-bar-up")
         ?.addEventListener("click", () => moveSelectedActions(-1));
@@ -406,16 +478,21 @@ function initSelectionBar() {
         ?.addEventListener("click", () => moveSelectedActions(1));
     document
         .getElementById("selection-bar-delete")
-        ?.addEventListener("click", () => void removeActions(selectionInListOrder()));
+        ?.addEventListener(
+            "click",
+            () => void removeActions(selectionInListOrder()),
+        );
 
-    document.getElementById("selection-bar-cancel")?.addEventListener("click", () => {
-        if (selectedActionIds.size > 0) {
-            clearSelection();
-            return;
-        }
-        copiedActionJsons = [];
-        updateSelectionBar();
-    });
+    document
+        .getElementById("selection-bar-cancel")
+        ?.addEventListener("click", () => {
+            if (selectedActionIds.size > 0) {
+                clearSelection();
+                return;
+            }
+            copiedActionJsons = [];
+            updateSelectionBar();
+        });
 
     window.addEventListener("flu:mode-changed", updateSelectionBar);
     updateSelectionBar();
@@ -481,6 +558,10 @@ function selectionInListOrder(): number[] {
     return orderedActionIds().filter((id) => selectedActionIds.has(id));
 }
 
+export function getSelectedMacroActionIds(): number[] {
+    return selectionInListOrder();
+}
+
 async function removeActions(actionIds: number[]) {
     if (actionIds.length === 0) return;
 
@@ -490,7 +571,9 @@ async function removeActions(actionIds: number[]) {
             action_ids: actionIds,
         });
         const removed = new Set(actionIds);
-        macroState.actions = macroState.actions.filter((entry) => !removed.has(entry.id));
+        macroState.actions = macroState.actions.filter(
+            (entry) => !removed.has(entry.id),
+        );
         macroState.rawActions = macroState.rawActions.filter(
             (entry) => !removed.has(Number(entry.id)),
         );
@@ -574,7 +657,8 @@ function moveSelectedActions(delta: number) {
     if (delta < 0) {
         for (let index = 0; index < nextActions.length; index += 1) {
             if (!selected.has(nextActions[index].id)) continue;
-            if (index === 0 || selected.has(nextActions[index - 1].id)) continue;
+            if (index === 0 || selected.has(nextActions[index - 1].id))
+                continue;
             [nextActions[index - 1], nextActions[index]] = [
                 nextActions[index],
                 nextActions[index - 1],
@@ -596,89 +680,121 @@ function moveSelectedActions(delta: number) {
         }
     }
 
-    const rawById = new Map(macroState.rawActions.map((action) => [Number(action.id), action]));
+    const rawById = new Map(
+        macroState.rawActions.map((action) => [Number(action.id), action]),
+    );
     macroState.actions = nextActions;
     macroState.rawActions = nextActions
         .map((action) => rawById.get(action.id))
         .filter((action): action is MacroBackendAction => Boolean(action));
 
     renderActions({ animateReorder: true });
-    void persistActionOrder(nextActions.map((action) => action.id), previousActions);
+    void persistActionOrder(
+        nextActions.map((action) => action.id),
+        previousActions,
+    );
 }
 
 export function initMacroEditorShortcuts() {
     initSelectionBar();
 
-    window.addEventListener("keydown", (event) => {
-        const target = event.target as HTMLElement | null;
-        if (target && (target.matches("input, textarea, select") || target.isContentEditable)) {
-            return;
-        }
+    window.addEventListener(
+        "keydown",
+        (event) => {
+            const target = event.target as HTMLElement | null;
+            if (
+                target &&
+                (target.matches("input, textarea, select") ||
+                    target.isContentEditable)
+            ) {
+                return;
+            }
 
-        if (document.querySelector(".drawer-overlay.active, .modal.active")) {
-            return;
-        }
+            if (
+                document.querySelector(".drawer-overlay.active, .modal.active")
+            ) {
+                return;
+            }
 
-        const key = event.key;
-        const code = event.code;
-        const isPaste = (event.ctrlKey || event.metaKey) && (key.toLowerCase() === "v" || code === "KeyV");
-        const isSelectAll = (event.ctrlKey || event.metaKey) && (key.toLowerCase() === "a" || code === "KeyA");
-        if (selectedActionIds.size === 0 && !isPaste && !isSelectAll) {
-            return;
-        }
+            const key = event.key;
+            const code = event.code;
+            const isPaste =
+                (event.ctrlKey || event.metaKey) &&
+                (key.toLowerCase() === "v" || code === "KeyV");
+            const isSelectAll =
+                (event.ctrlKey || event.metaKey) &&
+                (key.toLowerCase() === "a" || code === "KeyA");
+            if (selectedActionIds.size === 0 && !isPaste && !isSelectAll) {
+                return;
+            }
 
-        const ids = selectionInListOrder();
+            const ids = selectionInListOrder();
 
-        if (isSelectAll) {
-            event.preventDefault();
-            event.stopPropagation();
-            const all = orderedActionIds();
-            setSelection(all, all[0] ?? null);
-            return;
-        }
+            if (isSelectAll) {
+                event.preventDefault();
+                event.stopPropagation();
+                const all = orderedActionIds();
+                setSelection(all, all[0] ?? null);
+                return;
+            }
 
-        if (key === "Delete" || code === "Delete") {
-            event.preventDefault();
-            event.stopPropagation();
-            void removeActions(ids);
-            return;
-        }
+            if (key === "Delete" || code === "Delete") {
+                event.preventDefault();
+                event.stopPropagation();
+                void removeActions(ids);
+                return;
+            }
 
-        if (key === "Escape") {
-            clearSelection();
-            return;
-        }
+            if (key === "Escape") {
+                clearSelection();
+                return;
+            }
 
-        if ((event.ctrlKey || event.metaKey) && (key.toLowerCase() === "d" || code === "KeyD")) {
-            event.preventDefault();
-            event.stopPropagation();
-            void duplicateActions(ids);
-            return;
-        }
+            if (
+                (event.ctrlKey || event.metaKey) &&
+                (key.toLowerCase() === "d" || code === "KeyD")
+            ) {
+                event.preventDefault();
+                event.stopPropagation();
+                void duplicateActions(ids);
+                return;
+            }
 
-        if ((event.ctrlKey || event.metaKey) && (key.toLowerCase() === "c" || code === "KeyC")) {
-            event.preventDefault();
-            event.stopPropagation();
-            void copySelectedActions();
-            return;
-        }
+            if (
+                (event.ctrlKey || event.metaKey) &&
+                (key.toLowerCase() === "c" || code === "KeyC")
+            ) {
+                event.preventDefault();
+                event.stopPropagation();
+                void copySelectedActions();
+                return;
+            }
 
-        if ((event.ctrlKey || event.metaKey) && (key.toLowerCase() === "v" || code === "KeyV")) {
-            event.preventDefault();
-            event.stopPropagation();
-            void pasteCopiedActions();
-            return;
-        }
+            if (
+                (event.ctrlKey || event.metaKey) &&
+                (key.toLowerCase() === "v" || code === "KeyV")
+            ) {
+                event.preventDefault();
+                event.stopPropagation();
+                void pasteCopiedActions();
+                return;
+            }
 
-        const isArrowUp = key === "ArrowUp" || code === "ArrowUp";
-        const isArrowDown = key === "ArrowDown" || code === "ArrowDown";
+            const isArrowUp = key === "ArrowUp" || code === "ArrowUp";
+            const isArrowDown = key === "ArrowDown" || code === "ArrowDown";
 
-        if ((event.ctrlKey || event.metaKey) && event.shiftKey && (isArrowUp || isArrowDown)) {
-            event.preventDefault();
-            event.stopPropagation();
-            moveSelectedActions(isArrowUp ? -1 : 1);
-        }
-    }, true);
+            if (
+                (event.ctrlKey || event.metaKey) &&
+                event.shiftKey &&
+                (isArrowUp || isArrowDown)
+            ) {
+                event.preventDefault();
+                event.stopPropagation();
+                moveSelectedActions(isArrowUp ? -1 : 1);
+            }
+        },
+        true,
+    );
 }
 
 function appendHighlightedDetails(container: Element, text: string) {
@@ -687,7 +803,9 @@ function appendHighlightedDetails(container: Element, text: string) {
     parts.forEach((part) => {
         const isNumber = /^\d+(?:\.\d+)?(?:\s*ms)?$/i.test(part.trim());
         const element = document.createElement("span");
-        element.className = isNumber ? "action-detail-number" : "action-detail-text";
+        element.className = isNumber
+            ? "action-detail-number"
+            : "action-detail-text";
         element.textContent = part;
         container.appendChild(element);
     });
@@ -703,7 +821,9 @@ function getActionSummary(action: (typeof macroState.actions)[number]) {
     }
 
     if (action.type === "move") {
-        return t("macro.move_summary", "Move {details}", { details: `${action.details.charAt(0).toLowerCase()}${action.details.slice(1).replace(t("macro.instant_suffix", " (instant)"), "")}` });
+        return t("macro.move_summary", "Move {details}", {
+            details: `${action.details.charAt(0).toLowerCase()}${action.details.slice(1).replace(t("macro.instant_suffix", " (instant)"), "")}`,
+        });
     }
 
     if (action.type === "mouse") {
@@ -714,13 +834,18 @@ function getActionSummary(action: (typeof macroState.actions)[number]) {
     }
 
     if (action.type === "keyboard") {
-        return action.detailSuffix ? `${action.name.replace(t("macro.key_prefix", "Key "), "")} ${action.details}` : `${action.name.replace(t("macro.key_prefix", "Key "), "")} ${action.details}`;
+        return action.detailSuffix
+            ? `${action.name.replace(t("macro.key_prefix", "Key "), "")} ${action.details}`
+            : `${action.name.replace(t("macro.key_prefix", "Key "), "")} ${action.details}`;
     }
 
     return `${action.name} ${action.details}`.trim();
 }
 
-function createActionElement(action: (typeof macroState.actions)[number], animate = false) {
+function createActionElement(
+    action: (typeof macroState.actions)[number],
+    animate = false,
+) {
     const item = document.createElement("div");
     item.className = "macro-action-item";
     item.setAttribute("data-action-id", String(action.id));
@@ -813,7 +938,11 @@ function createActionElement(action: (typeof macroState.actions)[number], animat
     });
 
     item.querySelector(".action-edit")?.addEventListener("click", () => {
-        window.dispatchEvent(new CustomEvent("flu:edit-macro-action", { detail: { actionId: action.id } }));
+        window.dispatchEvent(
+            new CustomEvent("flu:edit-macro-action", {
+                detail: { actionId: action.id },
+            }),
+        );
     });
 
     item.querySelector(".action-duplicate")?.addEventListener("click", () => {
@@ -821,13 +950,19 @@ function createActionElement(action: (typeof macroState.actions)[number], animat
     });
 
     if (animate) {
-        item.addEventListener("animationend", () => item.classList.remove("adding"), { once: true });
+        item.addEventListener(
+            "animationend",
+            () => item.classList.remove("adding"),
+            { once: true },
+        );
     }
 
     return item;
 }
 
-export function renderActions(options: { animateNew?: boolean; animateReorder?: boolean } = {}) {
+export function renderActions(
+    options: { animateNew?: boolean; animateReorder?: boolean } = {},
+) {
     const rawTotalMs = getMacroDurationMs(macroState.rawActions);
     const speedMultiplier = (window as any).flu_macro_speed_multiplier || 1.0;
     const totalMs = Math.round(rawTotalMs / speedMultiplier);
@@ -848,13 +983,18 @@ export function renderActions(options: { animateNew?: boolean; animateReorder?: 
 
     const previousPositions = options.animateReorder
         ? new Map(
-            getActionItems()
-                .map((item) => {
-                    const id = getActionIdFromElement(item);
-                    return id === null ? null : ([id, item.getBoundingClientRect()] as const);
-                })
-                .filter((entry): entry is readonly [number, DOMRect] => entry !== null),
-        )
+              getActionItems()
+                  .map((item) => {
+                      const id = getActionIdFromElement(item);
+                      return id === null
+                          ? null
+                          : ([id, item.getBoundingClientRect()] as const);
+                  })
+                  .filter(
+                      (entry): entry is readonly [number, DOMRect] =>
+                          entry !== null,
+                  ),
+          )
         : null;
 
     for (const id of [...selectedActionIds]) {
@@ -882,21 +1022,29 @@ export function renderActions(options: { animateNew?: boolean; animateReorder?: 
 
     listContainer.querySelector(".macro-list-empty")?.remove();
     const existingIds = new Set(
-        Array.from(listContainer.querySelectorAll<HTMLElement>(".macro-action-item"))
-            .map((element) => element.getAttribute("data-action-id") || "")
+        Array.from(
+            listContainer.querySelectorAll<HTMLElement>(".macro-action-item"),
+        ).map((element) => element.getAttribute("data-action-id") || ""),
     );
-    const liveIds = new Set(macroState.actions.map((action) => String(action.id)));
-    listContainer.querySelectorAll<HTMLElement>(".macro-action-item").forEach((element) => {
-        const id = element.getAttribute("data-action-id") || "";
-        if (!liveIds.has(id)) {
-            element.remove();
-        }
-    });
+    const liveIds = new Set(
+        macroState.actions.map((action) => String(action.id)),
+    );
+    listContainer
+        .querySelectorAll<HTMLElement>(".macro-action-item")
+        .forEach((element) => {
+            const id = element.getAttribute("data-action-id") || "";
+            if (!liveIds.has(id)) {
+                element.remove();
+            }
+        });
 
     let addedNewItemAtEnd = false;
-    const lastActionId = macroState.actions[macroState.actions.length - 1]?.id ?? null;
+    const lastActionId =
+        macroState.actions[macroState.actions.length - 1]?.id ?? null;
     macroState.actions.forEach((action) => {
-        const existing = listContainer.querySelector<HTMLElement>(`.macro-action-item[data-action-id="${action.id}"]`);
+        const existing = listContainer.querySelector<HTMLElement>(
+            `.macro-action-item[data-action-id="${action.id}"]`,
+        );
         const isNewItem = !existingIds.has(String(action.id));
         const shouldAnimate = Boolean(options.animateNew && isNewItem);
         const item = createActionElement(action, shouldAnimate);
@@ -909,7 +1057,9 @@ export function renderActions(options: { animateNew?: boolean; animateReorder?: 
     });
 
     macroState.actions.forEach((action) => {
-        const item = listContainer.querySelector<HTMLElement>(`.macro-action-item[data-action-id="${action.id}"]`);
+        const item = listContainer.querySelector<HTMLElement>(
+            `.macro-action-item[data-action-id="${action.id}"]`,
+        );
         if (item) {
             listContainer.appendChild(item);
         }
@@ -917,7 +1067,9 @@ export function renderActions(options: { animateNew?: boolean; animateReorder?: 
 
     if (previousPositions) {
         macroState.actions.forEach((action) => {
-            const item = listContainer.querySelector<HTMLElement>(`.macro-action-item[data-action-id="${action.id}"]`);
+            const item = listContainer.querySelector<HTMLElement>(
+                `.macro-action-item[data-action-id="${action.id}"]`,
+            );
             const previous = previousPositions.get(action.id);
             if (!item || !previous) return;
 
@@ -939,9 +1091,14 @@ export function renderActions(options: { animateNew?: boolean; animateReorder?: 
     }
 
     if (options.animateNew && addedNewItemAtEnd) {
-        const isMinimized = document.body.classList.contains("window-minimized") || document.hidden;
+        const isMinimized =
+            document.body.classList.contains("window-minimized") ||
+            document.hidden;
         window.requestAnimationFrame(() => {
-            listContainer.scrollTo({ top: listContainer.scrollHeight, behavior: isMinimized ? "auto" : "smooth" });
+            listContainer.scrollTo({
+                top: listContainer.scrollHeight,
+                behavior: isMinimized ? "auto" : "smooth",
+            });
         });
     }
 }
@@ -952,7 +1109,10 @@ export function updateCurrentActionHighlight() {
         return;
     }
 
-    const isMinimized = document.body.classList.contains("window-minimized") || document.hidden || (window as any).flu_window_hidden;
+    const isMinimized =
+        document.body.classList.contains("window-minimized") ||
+        document.hidden ||
+        (window as any).flu_window_hidden;
     if (isMinimized) {
         return;
     }
@@ -960,7 +1120,9 @@ export function updateCurrentActionHighlight() {
     listContainer.querySelectorAll(".macro-action-item").forEach((element) => {
         const item = element as HTMLElement;
         const id = Number(item.getAttribute("data-action-id"));
-        const isPlaying = macroState.currentPlayingActionId !== null && id === macroState.currentPlayingActionId;
+        const isPlaying =
+            macroState.currentPlayingActionId !== null &&
+            id === macroState.currentPlayingActionId;
         item.classList.toggle("playing", isPlaying);
         if (isPlaying) {
             item.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -968,7 +1130,9 @@ export function updateCurrentActionHighlight() {
     });
 }
 
-export async function loadActionsFromBackend(options: { animateNew?: boolean } = {}) {
+export async function loadActionsFromBackend(
+    options: { animateNew?: boolean } = {},
+) {
     const rawActions = await invoke<MacroBackendAction[]>("get_macro_actions");
     macroState.rawActions = rawActions;
     macroState.actions = rawActions

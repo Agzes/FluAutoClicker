@@ -5,13 +5,34 @@ import { notify } from "../notifications";
 import { createSlideIndicator } from "../utils";
 import { t } from "../i18n";
 import { toBackendConfig } from "./backend";
-import { applyMouseButtonSupport, gatherConfig, generateConfigUi, setupConfigListeners } from "./config-ui";
-import { initRecordingSettingsUi, syncRecordingOptionsToUi, applyRecordAvailability, setMacroRecordingState } from "./recording";
+import {
+    applyMouseButtonSupport,
+    gatherConfig,
+    generateConfigUi,
+    setupConfigListeners,
+} from "./config-ui";
+import { initBatchEdit } from "./batch-edit";
+import {
+    initRecordingSettingsUi,
+    syncRecordingOptionsToUi,
+    applyRecordAvailability,
+    setMacroRecordingState,
+} from "./recording";
 import { applyRepeatModeToUi, initRepeatSettingsListeners } from "./repeat";
-import { renderActions, loadActionsFromBackend, updateCurrentActionHighlight, initMacroEditorShortcuts } from "./render";
+import {
+    renderActions,
+    loadActionsFromBackend,
+    updateCurrentActionHighlight,
+    initMacroEditorShortcuts,
+} from "./render";
 import { initMacroScrollbar } from "./scrollbar";
 import { macroState } from "./state";
-import type { MacroActionType, MacroCapabilities, MacroRecordingOptions, MacroRepeatState } from "./types";
+import type {
+    MacroActionType,
+    MacroCapabilities,
+    MacroRecordingOptions,
+    MacroRepeatState,
+} from "./types";
 
 let macroReadyPromise: Promise<void> | null = null;
 
@@ -23,9 +44,13 @@ function initRecordButton(recordButton: HTMLElement | null) {
     recordButton.addEventListener("click", async () => {
         if (!macroState.capabilities.recording_supported) {
             notify(
-                macroState.capabilities.recording_reason || t("macro.recording_unavailable", "Live macro recording is not available on this system."),
+                macroState.capabilities.recording_reason ||
+                    t(
+                        "macro.recording_unavailable",
+                        "Live macro recording is not available on this system.",
+                    ),
                 "warning",
-                3600
+                3600,
             );
             return;
         }
@@ -34,13 +59,28 @@ function initRecordButton(recordButton: HTMLElement | null) {
         try {
             if (playerState === "recording") {
                 await invoke("stop_macro_recording");
-                notify(t("macro.recording_stopped", "Macro recording stopped"), "info", 1800);
+                notify(
+                    t("macro.recording_stopped", "Macro recording stopped"),
+                    "info",
+                    1800,
+                );
             } else {
                 await invoke("start_macro_recording");
-                notify(t("macro.recording_started", "Recording started. New actions will be added to this macro."), "success", 2600);
+                notify(
+                    t(
+                        "macro.recording_started",
+                        "Recording started. New actions will be added to this macro.",
+                    ),
+                    "success",
+                    2600,
+                );
             }
         } catch (error) {
-            notify(error instanceof Error ? error.message : String(error), "error", 3200);
+            notify(
+                error instanceof Error ? error.message : String(error),
+                "error",
+                3200,
+            );
         }
     });
 }
@@ -54,7 +94,13 @@ function initAddActionDrawer() {
     const saveButton = document.getElementById("macro-config-save");
     const backButton = document.getElementById("macro-config-back");
 
-    if (!addButton || !selectionView || !configView || !configContent || !configTitle) {
+    if (
+        !addButton ||
+        !selectionView ||
+        !configView ||
+        !configContent ||
+        !configTitle
+    ) {
         return;
     }
 
@@ -72,13 +118,22 @@ function initAddActionDrawer() {
     addButton.addEventListener("click", () => {
         editingActionId = null;
         showSelectionView();
-        openDrawer("section-macro-add", t("macro.drawer.add_title", "Add Macro Action"), "&#58490;");
+        openDrawer(
+            "section-macro-add",
+            t("macro.drawer.add_title", "Add Macro Action"),
+            "&#58490;",
+        );
     });
 
     document.querySelectorAll(".macro-add-item-trigger").forEach((trigger) => {
         trigger.addEventListener("click", () => {
             const actionType = trigger.getAttribute("data-action");
-            if (!actionType || !["mouse", "move", "keyboard", "sleep", "scroll"].includes(actionType)) {
+            if (
+                !actionType ||
+                !["mouse", "move", "keyboard", "sleep", "scroll"].includes(
+                    actionType,
+                )
+            ) {
                 return;
             }
 
@@ -89,26 +144,41 @@ function initAddActionDrawer() {
             void configView.offsetWidth;
             configView.classList.add("view-fade-in");
 
-            configTitle.textContent = t("macro.configure_action", "Configure {type} Action", { type: currentType.charAt(0).toUpperCase() + currentType.slice(1) });
+            configTitle.textContent = t(
+                "macro.configure_action",
+                "Configure {type} Action",
+                {
+                    type:
+                        currentType.charAt(0).toUpperCase() +
+                        currentType.slice(1),
+                },
+            );
             configContent.innerHTML = generateConfigUi(currentType);
             applyMouseButtonSupport(configContent);
             setupConfigListeners(currentType, configContent);
 
             window.setTimeout(() => {
-                configContent.querySelectorAll(".toggle-row, .multi-button-row").forEach((row) => {
-                    const activeButton = row.querySelector<HTMLElement>(".active");
-                    if (!activeButton) {
-                        return;
-                    }
+                configContent
+                    .querySelectorAll(".toggle-row, .multi-button-row")
+                    .forEach((row) => {
+                        const activeButton =
+                            row.querySelector<HTMLElement>(".active");
+                        if (!activeButton) {
+                            return;
+                        }
 
-                    createSlideIndicator(row, activeButton, true);
-                    if (activeButton.dataset.value === "hold") {
-                        row.parentElement?.querySelector(".expandable-content")?.classList.add("expanded");
-                    }
-                    if (activeButton.dataset.value === "custom") {
-                        document.getElementById("cfg-mouse-coord-section")?.classList.add("expanded");
-                    }
-                });
+                        createSlideIndicator(row, activeButton, true);
+                        if (activeButton.dataset.value === "hold") {
+                            row.parentElement
+                                ?.querySelector(".expandable-content")
+                                ?.classList.add("expanded");
+                        }
+                        if (activeButton.dataset.value === "custom") {
+                            document
+                                .getElementById("cfg-mouse-coord-section")
+                                ?.classList.add("expanded");
+                        }
+                    });
             }, 50);
         });
     });
@@ -117,7 +187,9 @@ function initAddActionDrawer() {
         const detail = (event as CustomEvent<{ actionId: number }>).detail;
         const actionId = detail.actionId;
 
-        const rawAction = macroState.rawActions?.find((a) => Number(a.id) === actionId);
+        const rawAction = macroState.rawActions?.find(
+            (a) => Number(a.id) === actionId,
+        );
         if (!rawAction || !rawAction.config?.type) {
             return;
         }
@@ -131,28 +203,46 @@ function initAddActionDrawer() {
         void configView.offsetWidth;
         configView.classList.add("view-fade-in");
 
-        configTitle.textContent = t("macro.configure_action", "Configure {type} Action", { type: currentType.charAt(0).toUpperCase() + currentType.slice(1) });
+        configTitle.textContent = t(
+            "macro.configure_action",
+            "Configure {type} Action",
+            {
+                type:
+                    currentType.charAt(0).toUpperCase() + currentType.slice(1),
+            },
+        );
         configContent.innerHTML = generateConfigUi(currentType);
         applyMouseButtonSupport(configContent);
         setupConfigListeners(currentType, configContent, rawAction.config);
 
-        openDrawer("section-macro-add", t("macro.drawer.edit_title", "Edit Macro Action"), "&#57714;");
+        openDrawer(
+            "section-macro-add",
+            t("macro.drawer.edit_title", "Edit Macro Action"),
+            "&#57714;",
+        );
 
         window.setTimeout(() => {
-            configContent.querySelectorAll(".toggle-row, .multi-button-row").forEach((row) => {
-                const activeButton = row.querySelector<HTMLElement>(".active");
-                if (!activeButton) {
-                    return;
-                }
+            configContent
+                .querySelectorAll(".toggle-row, .multi-button-row")
+                .forEach((row) => {
+                    const activeButton =
+                        row.querySelector<HTMLElement>(".active");
+                    if (!activeButton) {
+                        return;
+                    }
 
-                createSlideIndicator(row, activeButton, true);
-                if (activeButton.dataset.value === "hold") {
-                    row.parentElement?.querySelector(".expandable-content")?.classList.add("expanded");
-                }
-                if (activeButton.dataset.value === "custom") {
-                    document.getElementById("cfg-mouse-coord-section")?.classList.add("expanded");
-                }
-            });
+                    createSlideIndicator(row, activeButton, true);
+                    if (activeButton.dataset.value === "hold") {
+                        row.parentElement
+                            ?.querySelector(".expandable-content")
+                            ?.classList.add("expanded");
+                    }
+                    if (activeButton.dataset.value === "custom") {
+                        document
+                            .getElementById("cfg-mouse-coord-section")
+                            ?.classList.add("expanded");
+                    }
+                });
         }, 50);
     });
 
@@ -172,18 +262,41 @@ function initAddActionDrawer() {
         try {
             const actionJson = JSON.stringify(payload);
             if (editingActionId !== null) {
-                await invoke("update_macro_action", { actionId: editingActionId, action_id: editingActionId, actionJson, action_json: actionJson });
+                await invoke("update_macro_action", {
+                    actionId: editingActionId,
+                    action_id: editingActionId,
+                    actionJson,
+                    action_json: actionJson,
+                });
                 await loadActionsFromBackend({ animateNew: false });
-                notify(t("macro.action_updated", "Macro action updated"), "success", 1800);
+                notify(
+                    t("macro.action_updated", "Macro action updated"),
+                    "success",
+                    1800,
+                );
             } else {
-                await invoke("add_macro_action", { actionJson, action_json: actionJson });
+                await invoke("add_macro_action", {
+                    actionJson,
+                    action_json: actionJson,
+                });
                 await loadActionsFromBackend({ animateNew: true });
-                notify(t("macro.action_added", "Macro action added"), "success", 1800);
+                notify(
+                    t("macro.action_added", "Macro action added"),
+                    "success",
+                    1800,
+                );
             }
             closeDrawer();
         } catch (error) {
             console.error("Failed to save macro action", error);
-            notify(t("macro.action_save_error", "Could not save this macro action. Check the values and try again."), "error", 2600);
+            notify(
+                t(
+                    "macro.action_save_error",
+                    "Could not save this macro action. Check the values and try again.",
+                ),
+                "error",
+                2600,
+            );
         }
     });
 }
@@ -202,7 +315,14 @@ function initClearButton(recordButton: HTMLElement | null) {
             notify(t("macro.cleared", "Macro cleared"), "info", 1800);
         } catch (error) {
             console.error("Failed to clear macros", error);
-            notify(t("macro.clear_error", "Could not clear the macro. Try again in a moment."), "error", 2600);
+            notify(
+                t(
+                    "macro.clear_error",
+                    "Could not clear the macro. Try again in a moment.",
+                ),
+                "error",
+                2600,
+            );
         }
     };
 
@@ -218,28 +338,38 @@ function initClearButton(recordButton: HTMLElement | null) {
     const showConfirm = (count: number) => {
         if (!modal) return;
         if (modalText) {
-            modalText.textContent = t("macro.clear_confirm", "Clear all {count} actions?", {
-                count: String(count),
-            });
+            modalText.textContent = t(
+                "macro.clear_confirm",
+                "Clear all {count} actions?",
+                {
+                    count: String(count),
+                },
+            );
         }
         modal.style.display = "flex";
         document.getElementById("content")?.classList.add("blurred");
         requestAnimationFrame(() => modal.classList.add("active"));
     };
 
-    document.getElementById("macro-clear-btn")?.addEventListener("click", () => {
-        if (macroState.actions.length === 0) {
-            void clearMacro();
-            return;
-        }
-        showConfirm(macroState.actions.length);
-    });
+    document
+        .getElementById("macro-clear-btn")
+        ?.addEventListener("click", () => {
+            if (macroState.actions.length === 0) {
+                void clearMacro();
+                return;
+            }
+            showConfirm(macroState.actions.length);
+        });
 
-    document.getElementById("macro-clear-confirm-close")?.addEventListener("click", hideConfirm);
-    document.getElementById("macro-clear-confirm-apply")?.addEventListener("click", () => {
-        hideConfirm();
-        void clearMacro();
-    });
+    document
+        .getElementById("macro-clear-confirm-close")
+        ?.addEventListener("click", hideConfirm);
+    document
+        .getElementById("macro-clear-confirm-apply")
+        ?.addEventListener("click", () => {
+            hideConfirm();
+            void clearMacro();
+        });
     modal?.addEventListener("click", (event) => {
         if (event.target === modal) {
             hideConfirm();
@@ -248,12 +378,16 @@ function initClearButton(recordButton: HTMLElement | null) {
 }
 
 async function loadCapabilities(recordButton: HTMLElement | null) {
-    macroState.capabilities = await invoke<MacroCapabilities>("get_macro_capabilities");
+    macroState.capabilities = await invoke<MacroCapabilities>(
+        "get_macro_capabilities",
+    );
     applyRecordAvailability(recordButton);
 }
 
 async function loadRecordingOptions() {
-    macroState.recordingOptions = await invoke<MacroRecordingOptions>("get_macro_recording_options");
+    macroState.recordingOptions = await invoke<MacroRecordingOptions>(
+        "get_macro_recording_options",
+    );
     syncRecordingOptionsToUi();
 }
 
@@ -266,7 +400,13 @@ async function loadMacroState(recordButton: HTMLElement | null) {
 }
 
 function applyImportedMacroSettings(payload: unknown) {
-    const config = payload as { macro_settings?: { repeat_mode?: string; repeat_count?: number; repeat_duration_ms?: number } };
+    const config = payload as {
+        macro_settings?: {
+            repeat_mode?: string;
+            repeat_count?: number;
+            repeat_duration_ms?: number;
+        };
+    };
     const settings = config.macro_settings;
     if (!settings) {
         return;
@@ -275,7 +415,9 @@ function applyImportedMacroSettings(payload: unknown) {
     if (settings.repeat_mode === "finite_times") {
         applyRepeatModeToUi(`finite_times_${settings.repeat_count || 1}`);
     } else if (settings.repeat_mode === "finite_seconds") {
-        applyRepeatModeToUi(`finite_seconds_${settings.repeat_duration_ms || 1000}`);
+        applyRepeatModeToUi(
+            `finite_seconds_${settings.repeat_duration_ms || 1000}`,
+        );
     } else {
         applyRepeatModeToUi("infinite");
     }
@@ -288,7 +430,9 @@ function initMacroEventListeners(recordButton: HTMLElement | null) {
             macroState.currentPlayingActionId = null;
         } else {
             const parsed = Number(rawId);
-            macroState.currentPlayingActionId = Number.isFinite(parsed) ? parsed : null;
+            macroState.currentPlayingActionId = Number.isFinite(parsed)
+                ? parsed
+                : null;
         }
 
         if ((window as any).flu_window_hidden) {
@@ -327,24 +471,38 @@ function initMacroEventListeners(recordButton: HTMLElement | null) {
         updateCurrentActionHighlight();
     });
 
-    void listen<{ supported?: boolean; reason?: string | null }>("macro-recording-availability", (event) => {
-        macroState.capabilities = {
-            ...macroState.capabilities,
-            recording_supported: Boolean(event.payload?.supported),
-            recording_reason: event.payload?.reason ? String(event.payload.reason) : null,
-        };
+    void listen<{ supported?: boolean; reason?: string | null }>(
+        "macro-recording-availability",
+        (event) => {
+            macroState.capabilities = {
+                ...macroState.capabilities,
+                recording_supported: Boolean(event.payload?.supported),
+                recording_reason: event.payload?.reason
+                    ? String(event.payload.reason)
+                    : null,
+            };
 
-        applyRecordAvailability(recordButton);
-        if (!macroState.capabilities.recording_supported && macroState.capabilities.recording_reason) {
-            notify(macroState.capabilities.recording_reason, "warning", 4200);
-        }
-    });
+            applyRecordAvailability(recordButton);
+            if (
+                !macroState.capabilities.recording_supported &&
+                macroState.capabilities.recording_reason
+            ) {
+                notify(
+                    macroState.capabilities.recording_reason,
+                    "warning",
+                    4200,
+                );
+            }
+        },
+    );
 }
 
 function initSpeedMultiplierUi() {
     const speedToggle = document.getElementById("macro-speed-toggle");
     const customWrapper = document.getElementById("macro-custom-speed-wrapper");
-    const customValueInput = document.getElementById("macro-custom-speed-value") as HTMLInputElement | null;
+    const customValueInput = document.getElementById(
+        "macro-custom-speed-value",
+    ) as HTMLInputElement | null;
 
     if (!speedToggle) return;
 
@@ -374,10 +532,14 @@ function initSpeedMultiplierUi() {
     };
 
     speedToggle.addEventListener("click", (event) => {
-        const button = (event.target as HTMLElement).closest(".toggle-option") as HTMLElement | null;
+        const button = (event.target as HTMLElement).closest(
+            ".toggle-option",
+        ) as HTMLElement | null;
         if (!button) return;
 
-        speedToggle.querySelectorAll(".toggle-option").forEach((entry) => entry.classList.remove("active"));
+        speedToggle
+            .querySelectorAll(".toggle-option")
+            .forEach((entry) => entry.classList.remove("active"));
         button.classList.add("active");
         createSlideIndicator(speedToggle, button);
 
@@ -386,42 +548,52 @@ function initSpeedMultiplierUi() {
     });
 
     customValueInput?.addEventListener("input", () => {
-        const val = speedToggle.querySelector(".toggle-option.active")?.getAttribute("data-value");
+        const val = speedToggle
+            .querySelector(".toggle-option.active")
+            ?.getAttribute("data-value");
         if (val === "custom") {
             void updateSpeed("custom");
         }
     });
 
-    void invoke<number>("get_macro_speed_multiplier").then((multiplier) => {
-        (window as any).flu_macro_speed_multiplier = multiplier;
-        const presets = ["1", "2", "5", "10", "100"];
-        const presetStr = String(multiplier);
-        let activeBtn: HTMLElement | null;
-        if (presets.includes(presetStr)) {
-            activeBtn = speedToggle.querySelector(`.toggle-option[data-value="${presetStr}"]`);
-            if (customWrapper) {
-                customWrapper.classList.add("disabled");
-                if (customValueInput) customValueInput.disabled = true;
+    void invoke<number>("get_macro_speed_multiplier")
+        .then((multiplier) => {
+            (window as any).flu_macro_speed_multiplier = multiplier;
+            const presets = ["1", "2", "5", "10", "100"];
+            const presetStr = String(multiplier);
+            let activeBtn: HTMLElement | null;
+            if (presets.includes(presetStr)) {
+                activeBtn = speedToggle.querySelector(
+                    `.toggle-option[data-value="${presetStr}"]`,
+                );
+                if (customWrapper) {
+                    customWrapper.classList.add("disabled");
+                    if (customValueInput) customValueInput.disabled = true;
+                }
+            } else {
+                activeBtn = speedToggle.querySelector(
+                    '.toggle-option[data-value="custom"]',
+                );
+                if (customValueInput) {
+                    customValueInput.value = presetStr;
+                    customValueInput.disabled = false;
+                }
+                if (customWrapper) {
+                    customWrapper.classList.remove("disabled");
+                }
             }
-        } else {
-            activeBtn = speedToggle.querySelector('.toggle-option[data-value="custom"]');
-            if (customValueInput) {
-                customValueInput.value = presetStr;
-                customValueInput.disabled = false;
-            }
-            if (customWrapper) {
-                customWrapper.classList.remove("disabled");
-            }
-        }
 
-        if (activeBtn) {
-            speedToggle.querySelectorAll(".toggle-option").forEach((entry) => entry.classList.remove("active"));
-            activeBtn.classList.add("active");
-            createSlideIndicator(speedToggle, activeBtn, true);
-        }
-    }).catch((error) => {
-        console.error("Failed to load speed multiplier", error);
-    });
+            if (activeBtn) {
+                speedToggle
+                    .querySelectorAll(".toggle-option")
+                    .forEach((entry) => entry.classList.remove("active"));
+                activeBtn.classList.add("active");
+                createSlideIndicator(speedToggle, activeBtn, true);
+            }
+        })
+        .catch((error) => {
+            console.error("Failed to load speed multiplier", error);
+        });
 }
 
 export function initMacro() {
@@ -429,13 +601,20 @@ export function initMacro() {
 
     initRecordingSettingsUi();
 
-    document.getElementById("macro-record-settings-btn")?.addEventListener("click", () => {
-        openDrawer("section-macro-recording", t("macro.drawer.recording_title", "Recording Filters"), "&#58700;");
-        syncRecordingOptionsToUi();
-    });
+    document
+        .getElementById("macro-record-settings-btn")
+        ?.addEventListener("click", () => {
+            openDrawer(
+                "section-macro-recording",
+                t("macro.drawer.recording_title", "Recording Filters"),
+                "&#58700;",
+            );
+            syncRecordingOptionsToUi();
+        });
 
     initRecordButton(recordButton);
     initAddActionDrawer();
+    initBatchEdit();
     initClearButton(recordButton);
     initRepeatSettingsListeners();
     initSpeedMultiplierUi();
@@ -444,10 +623,12 @@ export function initMacro() {
         loadCapabilities(recordButton),
         loadRecordingOptions(),
         loadMacroState(recordButton),
-    ]).then(() => undefined).catch((error) => {
-        macroReadyPromise = null;
-        console.error("Failed to initialize macro state", error);
-    });
+    ])
+        .then(() => undefined)
+        .catch((error) => {
+            macroReadyPromise = null;
+            console.error("Failed to initialize macro state", error);
+        });
 
     renderActions();
     initMacroEditorShortcuts();

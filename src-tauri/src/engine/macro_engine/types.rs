@@ -36,7 +36,7 @@ pub enum MacroMoveStyle {
     },
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum MacroActionConfig {
     Mouse {
