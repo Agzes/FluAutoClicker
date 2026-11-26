@@ -28,6 +28,14 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v7
 
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+
+            - name: Generate web/releases.json
+              run: node scripts/generate-web-releases.mjs
+
             - name: Setup Pages
               uses: actions/configure-pages@v6
 

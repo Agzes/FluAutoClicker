@@ -1,0 +1,41 @@
+name: Sync Web Changelog
+
+on:
+    push:
+        branches:
+            - next
+        paths:
+            - "docs/release-notes/**"
+            - "docs/updates/**"
+            - "scripts/generate-web-releases.mjs"
+    release:
+        types: [published]
+    workflow_dispatch:
+
+permissions:
+    contents: write
+
+jobs:
+    sync:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v7
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+
+            - name: Generate web/releases.json
+              run: node scripts/generate-web-releases.mjs
+
+            - name: Commit updated releases.json
+              run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+                  git add web/releases.json
+                  if ! git diff --cached --quiet; then
+                      git commit -m "chore(web): sync releases.json [skip ci]"
+                      git push
+                  fi

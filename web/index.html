@@ -47,10 +47,11 @@
                         </span>
                     </div>
                     <a
-                        href="https://github.com/Agzes/FluAutoClicker/releases/tag/v0.1.0-beta.9"
+                        href="https://github.com/Agzes/FluAutoClicker/releases/latest"
                         target="_blank"
                         rel="noopener noreferrer"
                         class="header-version"
+                        id="header-version-link"
                         title="View release on GitHub"
                     >
                         v0.1.0-beta.9
@@ -77,6 +78,14 @@
                         data-i18n="nav.features"
                     >
                         Features
+                    </button>
+                    <button
+                        type="button"
+                        class="tab"
+                        data-view="changelog"
+                        data-i18n="nav.changelog"
+                    >
+                        Changelog
                     </button>
                 </nav>
 
@@ -193,11 +202,14 @@
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     class="download-btn"
+                                    id="hero-download-btn"
                                 >
                                     <span data-i18n="hero.download"
                                         >Download</span
                                     >
-                                    <span class="download-ver"
+                                    <span
+                                        class="download-ver"
+                                        id="hero-download-ver"
                                         >v0.1.0-beta.9</span
                                     >
                                 </a>
@@ -249,6 +261,7 @@
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     class="dl-row"
+                                    data-dl="windows"
                                 >
                                     <span data-i18n="hero.win"
                                         >Windows x64</span
@@ -260,12 +273,13 @@
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     class="dl-row"
+                                    data-dl="linux"
                                 >
                                     <span data-i18n="hero.linux"
                                         >Linux x64</span
                                     >
                                     <span class="dl-ext"
-                                        >AppImage · deb · rpm</span
+                                        >AppImage • deb • rpm</span
                                     >
                                 </a>
                             </div>
@@ -802,17 +816,18 @@
                                                         >Mouse Jiggler</span
                                                     >
                                                 </button>
-                                                <a
-                                                    href="https://github.com/Agzes/FluAutoClicker"
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
+                                                <button
+                                                    type="button"
                                                     class="feature-btn"
+                                                    id="cps-quick-btn"
                                                 >
                                                     <span class="icon"
-                                                        >&#58378;</span
+                                                        >&#59030;</span
                                                     >
-                                                    <span>GitHub</span>
-                                                </a>
+                                                    <span data-i18n="app.cps"
+                                                        >CPS Test</span
+                                                    >
+                                                </button>
                                             </div>
                                         </div>
                                     </section>
@@ -1192,11 +1207,94 @@
                     </div>
                 </div>
 
-                <div
-                    class="and-more-card font-logo"
-                    data-i18n="features.more.title"
-                >
+                <div class="and-more-card" data-i18n="features.more.title">
                     and more...
+                </div>
+            </section>
+
+            <section
+                class="page-view"
+                id="view-changelog"
+                aria-label="Changelog"
+            >
+                <div class="changelog-wrap">
+                    <div class="section-row changelog-toolbar">
+                        <div class="changelog-toolbar-left">
+                            <span
+                                class="changelog-toolbar-icon"
+                                aria-hidden="true"
+                            >
+                                <svg
+                                    width="14"
+                                    height="14"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path
+                                        d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                                    />
+                                    <polyline points="14 2 14 8 20 8" />
+                                    <line x1="16" y1="13" x2="8" y2="13" />
+                                    <line x1="16" y1="17" x2="8" y2="17" />
+                                    <polyline points="10 9 9 9 8 9" />
+                                </svg>
+                            </span>
+                            <div class="changelog-toolbar-copy">
+                                <span
+                                    class="changelog-toolbar-title"
+                                    data-i18n="changelog.title"
+                                    >Changelog</span
+                                >
+                                <span
+                                    class="changelog-toolbar-sub"
+                                    data-i18n="changelog.subtitle"
+                                    >Release notes parsed live from GitHub</span
+                                >
+                            </div>
+                        </div>
+                        <div class="changelog-toolbar-actions">
+                            <button
+                                type="button"
+                                class="header-link-btn changelog-refresh-btn"
+                                id="changelog-refresh-btn"
+                            >
+                                <svg
+                                    class="changelog-refresh-svg"
+                                    width="13"
+                                    height="13"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2.1"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+                                    <polyline points="21 3 21 9 15 9" />
+                                </svg>
+                                <span data-i18n="changelog.refresh"
+                                    >Refresh</span
+                                >
+                            </button>
+                            <a
+                                href="https://github.com/Agzes/FluAutoClicker/releases"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="header-link-btn"
+                            >
+                                <span data-i18n="changelog.view_github"
+                                    >GitHub Releases</span
+                                >
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="changelog-list" id="changelog-list"></div>
                 </div>
             </section>
         </main>
