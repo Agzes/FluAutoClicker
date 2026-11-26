@@ -2631,7 +2631,7 @@ pub async fn batch_edit_macro_actions(
             actions[action_index].config = config;
         }
 
-        insertions.sort_by(|left, right| right.0.cmp(&left.0));
+        insertions.sort_by_key(|left| std::cmp::Reverse(left.0));
         for (after_index, duration_ms) in insertions {
             let id = state
                 .macro_engine
