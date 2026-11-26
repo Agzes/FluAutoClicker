@@ -8,3 +8,5 @@ pub mod keyboard_uinput;
 pub mod macro_engine;
 pub mod state;
 pub mod uinput;
+#[cfg(target_os = "linux")]
+pub mod wayland_portal;

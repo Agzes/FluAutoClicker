@@ -218,7 +218,8 @@ pub(crate) fn global_hotkeys_supported() -> bool {
     #[cfg(target_os = "linux")]
     {
         if is_wayland_session() {
-            return crate::engine::hyprland::is_active();
+            return crate::engine::hyprland::is_active()
+                || crate::engine::wayland_portal::is_active();
         }
     }
     true
@@ -230,6 +231,8 @@ pub(crate) fn hotkey_backend() -> &'static str {
         if is_wayland_session() {
             return if crate::engine::hyprland::is_active() {
                 "hyprland"
+            } else if crate::engine::wayland_portal::is_active() {
+                "portal"
             } else {
                 "unsupported"
             };
@@ -322,10 +325,12 @@ fn running_mode_from_state(state: &Arc<AppState>) -> Option<String> {
     if state.kb_is_running.load(Ordering::SeqCst) {
         return Some("keyboard".to_string());
     }
-    if matches!(
-        *state.macro_engine.player_state.blocking_lock(),
-        MacroPlayerState::Playing
-    ) {
+    if state
+        .macro_engine
+        .player_state
+        .try_lock()
+        .is_ok_and(|player_state| matches!(*player_state, MacroPlayerState::Playing))
+    {
         return Some("macro".to_string());
     }
     None
@@ -629,6 +634,10 @@ pub(crate) fn unregister_all_hotkeys(app: &AppHandle) -> Result<(), String> {
             crate::engine::hyprland::clear_binds();
             return Ok(());
         }
+        if crate::engine::wayland_portal::is_active() {
+            crate::engine::wayland_portal::clear_binds();
+            return Ok(());
+        }
     }
 
     app.global_shortcut()
@@ -644,6 +653,9 @@ pub(crate) fn register_runtime_hotkeys(
     {
         if crate::engine::hyprland::is_active() {
             return crate::engine::hyprland::apply_hotkeys(hotkeys);
+        }
+        if crate::engine::wayland_portal::is_active() {
+            return crate::engine::wayland_portal::apply_hotkeys(hotkeys);
         }
     }
 
@@ -945,6 +957,7 @@ pub fn run() {
             get_platform_capabilities,
             suspend_hotkeys,
             resume_hotkeys,
+            configure_portal_hotkeys,
             set_hotkey,
             check_hyprland,
             get_system_accent_color,
@@ -1050,9 +1063,20 @@ pub fn run() {
             );
 
             #[cfg(target_os = "linux")]
-            crate::engine::hyprland::init(app.handle().clone());
+            let portal_startup = {
+                crate::engine::hyprland::init(app.handle().clone());
+                crate::engine::wayland_portal::init(app.handle().clone());
+                if crate::engine::wayland_portal::is_active() {
+                    crate::engine::wayland_portal::sync_on_startup(loaded_hotkeys.clone());
+                    true
+                } else {
+                    false
+                }
+            };
+            #[cfg(not(target_os = "linux"))]
+            let portal_startup = false;
 
-            if register_runtime_hotkeys(app.handle(), &loaded_hotkeys).is_err() {
+            if !portal_startup && register_runtime_hotkeys(app.handle(), &loaded_hotkeys).is_err() {
                 warn!("Failed to register runtime hotkeys, falling back to defaults");
                 let fallback_hotkeys = RuntimeHotkeys::default();
                 {

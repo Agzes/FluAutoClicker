@@ -1093,6 +1093,21 @@ fn linux_window_manager_hint() -> Option<&'static str> {
 }
 
 #[tauri::command]
+pub async fn configure_portal_hotkeys(state: State<'_, Arc<AppState>>) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    {
+        let hotkeys = state.hotkeys.lock().await.clone();
+        return crate::engine::wayland_portal::configure_shortcuts(&hotkeys).await;
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = state;
+        Ok(())
+    }
+}
+
+#[tauri::command]
 pub fn suspend_hotkeys(state: State<'_, Arc<AppState>>, app: AppHandle) -> Result<(), String> {
     state.hotkeys_suspended.store(true, Ordering::SeqCst);
 

@@ -1317,6 +1317,7 @@ dependencies = [
  "dirs",
  "enigo",
  "evdev",
+ "futures-core",
  "input-linux",
  "input-linux-sys",
  "log",
@@ -1340,6 +1341,7 @@ dependencies = [
  "wayland-scanner",
  "window-vibrancy",
  "winreg",
+ "zbus",
 ]
 
 [[package]]

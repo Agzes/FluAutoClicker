@@ -4,9 +4,7 @@ import { getPlatformCapabilities } from "./platform-capabilities";
 import { t } from "./i18n";
 
 type HotkeyAction =
-    | "toggle_start_stop"
-    | "pick_position"
-    | "toggle_macro_recording";
+    "toggle_start_stop" | "pick_position" | "toggle_macro_recording";
 
 type RuntimeHotkeys = {
     toggle_start_stop: string;
@@ -69,7 +67,8 @@ function normalizeDisplayPart(part: string): string {
 
     if (/^key[a-z]$/i.test(trimmed)) return trimmed.slice(3).toUpperCase();
     if (/^digit[0-9]$/i.test(trimmed)) return trimmed.slice(5);
-    if (/^arrow(up|down|left|right)$/i.test(trimmed)) return trimmed.replace(/^arrow/i, "");
+    if (/^arrow(up|down|left|right)$/i.test(trimmed))
+        return trimmed.replace(/^arrow/i, "");
 
     if (trimmed === "Escape") return "Esc";
 
@@ -77,7 +76,13 @@ function normalizeDisplayPart(part: string): string {
     if (lower === "ctrl" || lower === "control") return "Ctrl";
     if (lower === "shift") return "Shift";
     if (lower === "alt") return "Alt";
-    if (lower === "meta" || lower === "cmd" || lower === "win" || lower === "super") return "Win";
+    if (
+        lower === "meta" ||
+        lower === "cmd" ||
+        lower === "win" ||
+        lower === "super"
+    )
+        return "Win";
     if (trimmed.length === 1) return trimmed.toUpperCase();
     return trimmed;
 }
@@ -148,9 +153,14 @@ async function fetchHotkeys(): Promise<RuntimeHotkeys> {
 }
 
 export async function initHotkeysEditor() {
-    const rows = Array.from(document.querySelectorAll<HTMLElement>(".hotkey-list-item[data-hotkey-action]"));
+    const rows = Array.from(
+        document.querySelectorAll<HTMLElement>(
+            ".hotkey-list-item[data-hotkey-action]",
+        ),
+    );
     if (!rows.length) return;
     const capabilities = await getPlatformCapabilities();
+    const isPortalBackend = capabilities.hotkey_backend === "portal";
     const hotkeysAvailable = capabilities.global_hotkeys;
 
     const rowByAction = new Map<HotkeyAction, HTMLElement>();
@@ -171,31 +181,75 @@ export async function initHotkeysEditor() {
     const render = () => {
         ACTIONS.forEach((action) => {
             const row = rowByAction.get(action);
-            const badge = row?.querySelector<HTMLElement>("[data-hotkey-value]");
+            const badge = row?.querySelector<HTMLElement>(
+                "[data-hotkey-value]",
+            );
             if (!row || !badge) return;
 
             const raw = getHotkeyValue(hotkeys, action);
             badge.dataset.rawHotkey = raw;
-            badge.textContent = hotkeysAvailable ? formatHotkeyDisplay(raw) : t("unavailable", "Unavailable");
-            badge.title = hotkeysAvailable ? t("click_to_change", "Click to change") : t("hotkeys_unavailable_wayland", "Global hotkeys are unavailable on Wayland");
+            badge.textContent = !hotkeysAvailable
+                ? t("unavailable", "Unavailable")
+                : isPortalBackend
+                  ? t("hotkeys.portal_managed", "System")
+                  : formatHotkeyDisplay(raw);
+            badge.title = !hotkeysAvailable
+                ? t(
+                      "hotkeys_unavailable_wayland",
+                      "Global hotkeys are unavailable on Wayland",
+                  )
+                : isPortalBackend
+                  ? t("hotkeys.portal_configure", "Configure System Shortcuts")
+                  : t("click_to_change", "Click to change");
             row.classList.toggle("disabled", !hotkeysAvailable);
-            row.setAttribute("aria-disabled", hotkeysAvailable ? "false" : "true");
+            row.classList.toggle(
+                "portal-managed",
+                hotkeysAvailable && isPortalBackend,
+            );
+            row.setAttribute(
+                "aria-disabled",
+                hotkeysAvailable ? "false" : "true",
+            );
         });
 
-        if (hotkeysAvailable) {
+        const listEl = document.querySelector<HTMLElement>(
+            "#section-hotkeys .hotkey-items-list",
+        );
+        if (listEl) {
+            listEl.style.display =
+                hotkeysAvailable && isPortalBackend ? "none" : "";
+        }
+
+        const portalPanel = document.getElementById("hotkeys-portal-panel");
+        if (portalPanel) {
+            portalPanel.style.display =
+                hotkeysAvailable && isPortalBackend ? "flex" : "none";
+        }
+
+        const startHotkeyLabel =
+            document.querySelector<HTMLElement>(".start-hotkey");
+        if (hotkeysAvailable && !isPortalBackend) {
+            if (startHotkeyLabel) startHotkeyLabel.style.display = "";
             updateStartHotkeyLabel(hotkeys);
-        } else {
-            const label = document.querySelector<HTMLElement>(".start-hotkey");
-            if (label) label.textContent = t("beta", "BETA");
+        } else if (startHotkeyLabel) {
+            startHotkeyLabel.style.display = "";
+            startHotkeyLabel.textContent =
+                isPortalBackend && hotkeysAvailable
+                    ? t("hotkeys.portal_managed", "System")
+                    : t("beta", "BETA");
         }
     };
 
-    const clearCaptureState = async (restoreBadge: boolean, resumeHotkeys = true) => {
+    const clearCaptureState = async (
+        restoreBadge: boolean,
+        resumeHotkeys = true,
+    ) => {
         if (activeRow) activeRow.classList.remove("listening");
         if (activeBadge) {
             activeBadge.classList.remove("listening");
             if (restoreBadge) {
-                activeBadge.textContent = formatHotkeyDisplay(activePreviousRaw);
+                activeBadge.textContent =
+                    formatHotkeyDisplay(activePreviousRaw);
             }
         }
 
@@ -212,7 +266,8 @@ export async function initHotkeysEditor() {
                 await invoke("resume_hotkeys");
                 hotkeysSuspendedForCapture = false;
             } catch (error) {
-                const message = error instanceof Error ? error.message : String(error);
+                const message =
+                    error instanceof Error ? error.message : String(error);
                 notify(message, "error", 2600);
             }
         }
@@ -246,19 +301,49 @@ export async function initHotkeysEditor() {
                 shortcut,
             });
             hotkeys = updated;
+            document
+                .getElementById("hotkeys-portal-configure-btn")
+                ?.addEventListener("click", () => void openPortalConfigure());
+
             render();
             await clearCaptureState(false);
-            notify(t("notify.hotkey_updated", "Hotkey updated"), "success", 1800);
+            notify(
+                t("notify.hotkey_updated", "Hotkey updated"),
+                "success",
+                1800,
+            );
         } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
+            const message =
+                error instanceof Error ? error.message : String(error);
             notify(message, "error", 2600);
             await clearCaptureState(true);
         }
     };
 
+    const openPortalConfigure = async () => {
+        try {
+            await invoke("configure_portal_hotkeys");
+        } catch (error) {
+            const message =
+                error instanceof Error ? error.message : String(error);
+            notify(message, "error", 3200);
+        }
+    };
+
     const startCapture = async (row: HTMLElement, action: HotkeyAction) => {
         if (!hotkeysAvailable) {
-            notify(t("hotkeys_unavailable_wayland", "Global hotkeys are unavailable on Wayland"), "info", 2400);
+            notify(
+                t(
+                    "hotkeys_unavailable_wayland",
+                    "Global hotkeys are unavailable on Wayland",
+                ),
+                "info",
+                2400,
+            );
+            return;
+        }
+
+        if (isPortalBackend) {
             return;
         }
 
@@ -276,7 +361,8 @@ export async function initHotkeysEditor() {
                 await invoke("suspend_hotkeys");
                 hotkeysSuspendedForCapture = true;
             } catch (error) {
-                const message = error instanceof Error ? error.message : String(error);
+                const message =
+                    error instanceof Error ? error.message : String(error);
                 notify(message, "error", 2600);
                 return;
             }
@@ -307,6 +393,10 @@ export async function initHotkeysEditor() {
             void startCapture(row, action);
         });
     });
+
+    document
+        .getElementById("hotkeys-portal-configure-btn")
+        ?.addEventListener("click", () => void openPortalConfigure());
 
     render();
 }
