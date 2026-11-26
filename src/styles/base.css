@@ -41,9 +41,9 @@
 @font-face {
     font-family: "LucideIcons";
     src:
-        url("../assets/icons/lucide-icons/lucide.woff2") format("woff2"),
-        url("../assets/icons/lucide-icons/lucide.woff") format("woff"),
-        url("../assets/icons/lucide-icons/lucide.ttf") format("truetype");
+        url("lucide-static/font/lucide.woff2") format("woff2"),
+        url("lucide-static/font/lucide.woff") format("woff"),
+        url("lucide-static/font/lucide.ttf") format("truetype");
     font-weight: normal;
     font-style: normal;
 }

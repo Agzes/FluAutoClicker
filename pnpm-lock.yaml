@@ -17,6 +17,9 @@ importers:
       '@tauri-apps/plugin-opener':
         specifier: ^2
         version: 2.7.3
+      lucide-static:
+        specifier: ^1.80.0
+        version: 1.80.0
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -902,6 +905,9 @@ packages:
 
   lodash.truncate@4.4.2:
     resolution: {integrity: sha512-jttmRe7bRse52OsWIMDLaXxWqRAmtIUccAQ3garviCqJjafXOfNMO0yMfNpdD6zbGaTU0P5Nz7e7gAT6cKmJRw==}
+
+  lucide-static@1.80.0:
+    resolution: {integrity: sha512-RB4WCODLshIIEYhKQsbJKhNvzKpkkIHvL1xwIDLL6uJJ5Qg14NPgA2eXETVyvx+r4Md1zTH9gkeb5Cn3EwLD2A==}
 
   mathml-tag-names@4.0.0:
     resolution: {integrity: sha512-aa6AU2Pcx0VP/XWnh8IGL0SYSgQHDT6Ucror2j2mXeFAlN3ahaNs8EZtG1YiticMkSLj3Gt6VPFfZogt7G5iFQ==}
@@ -1957,6 +1963,8 @@ snapshots:
       p-locate: 5.0.0
 
   lodash.truncate@4.4.2: {}
+
+  lucide-static@1.80.0: {}
 
   mathml-tag-names@4.0.0: {}
 

@@ -13,7 +13,7 @@ import {
     type AppConfigFile,
 } from "./settings-persistence";
 import { openIconPicker, initIconPicker } from "./icon-picker";
-import iconData from "../assets/icons/lucide-icons/data.json";
+import iconCodepoints from "lucide-static/font/codepoints.json";
 
 type ProfileEntry = {
     name: string;
@@ -27,16 +27,9 @@ type ProfileFile = {
     data: AppConfigFile;
 };
 
-type IconData = {
-    encodedCode: string;
-    prefix: string;
-    className: string;
-    unicode: string;
-};
-
-const lucideIcons: Record<string, IconData> = iconData as Record<
+const lucideIcons: Record<string, number> = iconCodepoints as Record<
     string,
-    IconData
+    number
 >;
 
 let activeProfile = "default";
@@ -64,15 +57,10 @@ function safeFilePart(value: string) {
     return value.replace(/[^a-z0-9_-]+/gi, "_") || "profile";
 }
 
-function unicodeChar(unicodeStr: string): string {
-    const m = unicodeStr.match(/&#(\d+);/);
-    return m ? String.fromCodePoint(parseInt(m[1], 10)) : "";
-}
-
 function getIconChar(iconKey: string | undefined): string {
     if (iconKey && lucideIcons[iconKey])
-        return unicodeChar(lucideIcons[iconKey].unicode);
-    return unicodeChar("&#58218;");
+        return String.fromCodePoint(lucideIcons[iconKey]);
+    return String.fromCodePoint(58218);
 }
 
 async function saveJson(filename: string, payload: unknown) {
