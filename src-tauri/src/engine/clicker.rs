@@ -187,28 +187,45 @@ fn should_stop_on_custom_position_move(
     enabled && primed && current_position.is_some_and(|position| position != target_position)
 }
 
-#[cfg(target_os = "windows")]
-fn wait_interval(interval_us: u64) {
-    let target = std::time::Instant::now() + std::time::Duration::from_micros(interval_us);
-    while let Some(remaining) = target.checked_duration_since(std::time::Instant::now()) {
-        if remaining > std::time::Duration::from_micros(250) {
-            std::thread::yield_now();
-        } else {
-            std::hint::spin_loop();
-        }
-    }
-}
-
-#[cfg(not(target_os = "windows"))]
-async fn wait_interval(interval_us: u64) {
+async fn wait_interval(interval_us: u64, running: &std::sync::atomic::AtomicBool) {
     if interval_us == 0 {
         return;
     }
 
-    if interval_us < 1000 {
-        std::thread::sleep(std::time::Duration::from_micros(interval_us));
-    } else {
-        tokio::time::sleep(tokio::time::Duration::from_micros(interval_us)).await;
+    if interval_us >= 20_000 {
+        let target = std::time::Instant::now() + std::time::Duration::from_micros(interval_us);
+        while running.load(Ordering::SeqCst) {
+            let Some(remaining) = target.checked_duration_since(std::time::Instant::now()) else {
+                break;
+            };
+            let chunk = remaining.min(std::time::Duration::from_millis(100));
+            tokio::time::sleep(chunk).await;
+        }
+        return;
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let target = std::time::Instant::now() + std::time::Duration::from_micros(interval_us);
+        while running.load(Ordering::SeqCst) {
+            let Some(remaining) = target.checked_duration_since(std::time::Instant::now()) else {
+                break;
+            };
+            if remaining > std::time::Duration::from_micros(250) {
+                std::thread::yield_now();
+            } else {
+                std::hint::spin_loop();
+            }
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        if interval_us < 1000 {
+            std::thread::sleep(std::time::Duration::from_micros(interval_us));
+        } else {
+            tokio::time::sleep(tokio::time::Duration::from_micros(interval_us)).await;
+        }
     }
 }
 
@@ -449,11 +466,7 @@ pub async fn click_task(state: Arc<AppState>, app: AppHandle) {
                 }
             }
 
-            #[cfg(target_os = "windows")]
-            wait_interval(final_interval_us as u64);
-
-            #[cfg(not(target_os = "windows"))]
-            wait_interval(final_interval_us as u64).await;
+            wait_interval(final_interval_us as u64, &state.is_running).await;
         } else {
             click_count = 0;
             start_time = std::time::Instant::now();
