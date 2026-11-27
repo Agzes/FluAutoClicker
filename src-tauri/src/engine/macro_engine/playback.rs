@@ -699,6 +699,10 @@ fn str_to_evdev_key(key: &str) -> Option<KeyCode> {
         "kpslash" | "kp/" | "numpad_/" => Some(KeyCode::KEY_KPSLASH),
         "numlock" | "num_lock" => Some(KeyCode::KEY_NUMLOCK),
         "capslock" | "caps" => Some(KeyCode::KEY_CAPSLOCK),
+        "ctrl" | "control" => Some(KeyCode::KEY_LEFTCTRL),
+        "shift" => Some(KeyCode::KEY_LEFTSHIFT),
+        "alt" => Some(KeyCode::KEY_LEFTALT),
+        "win" | "meta" | "super" => Some(KeyCode::KEY_LEFTMETA),
         _ => None,
     }
 }
@@ -1332,4 +1336,21 @@ fn estimate_actions_duration(actions: &[MacroAction]) -> u64 {
     }
 
     total
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    use super::str_to_evdev_key;
+    use evdev::KeyCode;
+
+    #[test]
+    fn str_to_evdev_key_supports_modifier_keys() {
+        assert_eq!(str_to_evdev_key("ctrl"), Some(KeyCode::KEY_LEFTCTRL));
+        assert_eq!(str_to_evdev_key("control"), Some(KeyCode::KEY_LEFTCTRL));
+        assert_eq!(str_to_evdev_key("shift"), Some(KeyCode::KEY_LEFTSHIFT));
+        assert_eq!(str_to_evdev_key("alt"), Some(KeyCode::KEY_LEFTALT));
+        assert_eq!(str_to_evdev_key("win"), Some(KeyCode::KEY_LEFTMETA));
+        assert_eq!(str_to_evdev_key("meta"), Some(KeyCode::KEY_LEFTMETA));
+        assert_eq!(str_to_evdev_key("super"), Some(KeyCode::KEY_LEFTMETA));
+    }
 }
