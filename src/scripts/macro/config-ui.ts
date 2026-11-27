@@ -207,59 +207,78 @@ function initKeyboardConfigUi(existingConfig?: MacroBackendAction["config"]) {
         slidingContainer?.classList.remove("numpad-active");
     });
 
-    recordButton?.addEventListener("click", () => {
-        isLocalRecording = !isLocalRecording;
-        recordButton.textContent = isLocalRecording ? t("recording", "Recording...") : t("click_to_record", "Click to Record");
-        recordButton.classList.toggle("active", isLocalRecording);
-
+    const stopLocalRecording = () => {
         if (!isLocalRecording) {
             return;
         }
-
-        const handleKey = (event: KeyboardEvent) => {
-            event.preventDefault();
-            activeModifiers = [];
-            if (event.ctrlKey) {
-                activeModifiers.push("ctrl");
-            }
-            if (event.shiftKey) {
-                activeModifiers.push("shift");
-            }
-            if (event.altKey) {
-                activeModifiers.push("alt");
-            }
-            if (event.metaKey) {
-                activeModifiers.push("win");
-            }
-
-            const keyMap: Record<string, string> = {
-                " ": "space",
-                enter: "enter",
-                tab: "tab",
-                backspace: "backspace",
-                escape: "escape",
-                capslock: "capslock",
-                arrowup: "up",
-                arrowdown: "down",
-                arrowleft: "left",
-                arrowright: "right",
-                pageup: "pageup",
-                pagedown: "pagedown",
-                delete: "delete",
-                insert: "insert",
-                home: "home",
-                end: "end",
-            };
-            const key = keyMap[event.key.toLowerCase()] || normalizeKeyboardLabel(event.key);
-            const isModifier = ["control", "shift", "alt", "meta"].includes(key);
-            updateKeyDisplay(isModifier ? "" : key);
-
-            isLocalRecording = false;
+        isLocalRecording = false;
+        if (recordButton) {
             recordButton.textContent = t("click_to_record", "Click to Record");
             recordButton.classList.remove("active");
-            window.removeEventListener("keydown", handleKey);
-        };
+        }
+        window.removeEventListener("keydown", handleKey);
+    };
 
+    const handleKey = (event: KeyboardEvent) => {
+        if (!recordButton?.isConnected) {
+            stopLocalRecording();
+            return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (event.key === "Escape") {
+            stopLocalRecording();
+            return;
+        }
+
+        activeModifiers = [];
+        if (event.ctrlKey) {
+            activeModifiers.push("ctrl");
+        }
+        if (event.shiftKey) {
+            activeModifiers.push("shift");
+        }
+        if (event.altKey) {
+            activeModifiers.push("alt");
+        }
+        if (event.metaKey) {
+            activeModifiers.push("win");
+        }
+
+        const keyMap: Record<string, string> = {
+            " ": "space",
+            enter: "enter",
+            tab: "tab",
+            backspace: "backspace",
+            escape: "escape",
+            capslock: "capslock",
+            arrowup: "up",
+            arrowdown: "down",
+            arrowleft: "left",
+            arrowright: "right",
+            pageup: "pageup",
+            pagedown: "pagedown",
+            delete: "delete",
+            insert: "insert",
+            home: "home",
+            end: "end",
+        };
+        const key = keyMap[event.key.toLowerCase()] || normalizeKeyboardLabel(event.key);
+        const isModifier = ["control", "shift", "alt", "meta"].includes(key);
+        updateKeyDisplay(isModifier ? "" : key);
+        stopLocalRecording();
+    };
+
+    recordButton?.addEventListener("click", () => {
+        if (isLocalRecording) {
+            stopLocalRecording();
+            return;
+        }
+
+        isLocalRecording = true;
+        recordButton.textContent = t("recording", "Recording...");
+        recordButton.classList.add("active");
         window.addEventListener("keydown", handleKey);
     });
 
