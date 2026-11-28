@@ -76,7 +76,27 @@ function importBackup() {
 }
 
 export function initCpsTestWindow() {
-    document.getElementById("cps-test-btn")?.addEventListener("click", () => {
+    document.getElementById("cps-test-btn")?.addEventListener("click", async () => {
+        let existingWindow: WebviewWindow | null = null;
+        try {
+            existingWindow = await WebviewWindow.getByLabel("cps-test");
+        } catch (error) {
+            console.error("Failed to check existing CPS Test window", error);
+        }
+
+        if (existingWindow) {
+            try {
+                if (await existingWindow.isMinimized()) {
+                    await existingWindow.unminimize();
+                }
+                await existingWindow.show();
+                await existingWindow.setFocus();
+            } catch (error) {
+                console.error("Failed to focus existing CPS Test window", error);
+            }
+            return;
+        }
+
         const cpsWindow = new WebviewWindow("cps-test", {
             url: "cps.html",
             title: t("cps.window_title", "CPS Test"),
